@@ -5,6 +5,10 @@
  * Both use a structural FirestoreTimestamp interface that is satisfied by
  * firebase-admin/firestore Timestamp without a direct import, so Functions
  * can stay in the admin SDK domain while sharing the same type shapes.
+ *
+ * Refer to docs/requirements/firestore-schema-refinement.md for the
+ * design rationale (deterministic IDs, denormalized display fields,
+ * messages-as-subcollection, etc.).
  */
 
 // ---------------------------------------------------------------------------
@@ -37,6 +41,32 @@ export const COLLECTIONS = {
 
 export type CollectionName = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];
 
+/** Subcollection names (nested under a parent document). */
+export const SUBCOLLECTIONS = {
+  /** chats/{chatId}/messages/{messageId} */
+  CHAT_MESSAGES: "messages",
+} as const;
+
+export type SubcollectionName =
+  (typeof SUBCOLLECTIONS)[keyof typeof SUBCOLLECTIONS];
+
+// ---------------------------------------------------------------------------
+// Deterministic ID helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * A character document shares its ID with the egg it hatched from
+ * (1 egg ↔ 1 character). Use this helper to keep both sides in sync.
+ */
+export const characterIdFromEggId = (eggId: string): string => eggId;
+
+/**
+ * A chat between a character and a user has a deterministic ID so the
+ * document can be fetched directly without a where-query.
+ */
+export const chatIdFor = (characterId: string, userUid: string): string =>
+  `${characterId}_${userUid}`;
+
 // ---------------------------------------------------------------------------
 // Document types
 // ---------------------------------------------------------------------------
@@ -49,6 +79,8 @@ export interface UserDoc {
   iconUrl: string;
   /** Account creation time */
   createdAt: DateLike;
+  /** Last profile update time */
+  updatedAt: DateLike;
   /** Tags the user is interested in */
   favoriteTags: string[];
 }
@@ -75,22 +107,34 @@ export interface PassionDoc {
 export interface EggDoc {
   /** UID of the user whose passion generated this egg */
   sourceUserUid: string;
+  /** Display-time denormalised copy of the source user's name */
+  sourceUserName: string;
   /** IDs of the passions that shaped this egg */
   basedOnPassionIds: string[];
   /** System prompt used to generate the character */
   characterPrompt: string;
   /** Hatch progress (e.g. 0–100) */
   hatchLevel: number;
+  /** Whether this egg has already hatched into a character */
+  hatched: boolean;
   /** Creation time */
   createdAt: DateLike;
   /** UID of the user currently holding the egg */
   currentOwnerUid: string;
 }
 
-/** characters/{characterId} */
+/**
+ * characters/{characterId}
+ *
+ * `characterId` is intentionally equal to the originating egg's id
+ * (`characterIdFromEggId`). The bidirectional link can be navigated
+ * without an extra query.
+ */
 export interface CharacterDoc {
-  /** ID of the egg this character hatched from */
+  /** ID of the egg this character hatched from (== characterId) */
   eggId: string;
+  /** UID of the user who currently owns this character */
+  ownerUid: string;
   /** Character name */
   name: string;
   /** Personality description */
@@ -103,6 +147,10 @@ export interface CharacterDoc {
   affinityScore: number;
   /** Topics unlocked through accumulated conversation */
   unlockedTopics: string[];
+  /** Creation time */
+  createdAt: DateLike;
+  /** Last interaction / growth update time */
+  updatedAt: DateLike;
 }
 
 /** exchanges/{exchangeId} */
@@ -111,15 +159,28 @@ export interface ExchangeDoc {
   fromUid: string;
   /** UID of the user who received the egg */
   toUid: string;
+  /** Denormalised display name of the giver */
+  fromUserName: string;
+  /** Denormalised display name of the receiver */
+  toUserName: string;
   /** ID of the exchanged egg */
   eggId: string;
+  /** Denormalised display name of the egg/character */
+  eggName: string;
   /** Exchange time */
   createdAt: DateLike;
   /** Context of the meeting (event name, location, etc.) */
   meetingContext: string;
 }
 
-/** Single message entry stored inside ChatDoc.messages */
+/**
+ * chats/{chatId}/messages/{messageId}
+ *
+ * Stored as a subcollection (not as an array on ChatDoc) so that:
+ *   - appending a message costs a single addDoc
+ *   - the latest N messages can be read with limit(N)
+ *   - the 1MB document size cap doesn't apply
+ */
 export interface ChatMessageDoc {
   /** Message author */
   role: "user" | "character";
@@ -129,14 +190,19 @@ export interface ChatMessageDoc {
   createdAt: DateLike;
 }
 
-/** chats/{chatId} */
+/**
+ * chats/{chatId}
+ *
+ * `chatId` is the deterministic `${characterId}_${userUid}` (see `chatIdFor`).
+ * Individual messages live in the `messages` subcollection.
+ */
 export interface ChatDoc {
   /** ID of the character participating in this chat */
   characterId: string;
   /** UID of the human user */
   userUid: string;
-  /** Ordered message history */
-  messages: ChatMessageDoc[];
+  /** Preview snippet of the most recent message (denormalised) */
+  lastMessagePreview: string;
   /** Time of the most recent message */
   updatedAt: DateLike;
 }
