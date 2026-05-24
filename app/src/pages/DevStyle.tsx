@@ -1,8 +1,9 @@
 import { CharacterCard } from '../features/components/CharacterCard'
+import { CharacterIllustration } from '../features/components/CharacterIllustration'
 import { EggCard } from '../features/components/EggCard'
 import { EggArt } from '../features/components/EggArt'
-import { Mascot } from '../features/components/Mascot'
 import { Button, Card, EmptyState, Modal, TagInput, Textarea, TextField } from '../components/ui'
+import { CHARACTER_SPRITES } from '../lib/characterAssets'
 import { getEggForCharacter } from '../lib/viewHelpers'
 import type { Character, Egg } from '../types/models'
 
@@ -65,11 +66,19 @@ export function DevStylePage({ characters, eggs }: DevStylePageProps) {
       </Card>
 
       <Card>
-        <h2>Mascot</h2>
+        <h2>Character Sprites</h2>
         <div className="mascot-row">
-          <Mascot egg={{ color: '#ffb6d9' }} size="small" />
-          <Mascot egg={{ color: '#ffe1a8' }} size="small" />
-          <Mascot egg={{ color: '#d9c8ff' }} size="small" />
+          <CharacterIllustration egg={{ motif: 'fox', color: '#ffb6d9', id: 'ds-pink', name: 'もも' }} size="small" showPedestal />
+          <CharacterIllustration egg={{ motif: 'cat', color: '#4EDBFB', id: 'ds-blue', name: 'そら' }} size="small" showPedestal />
+          <CharacterIllustration egg={{ motif: 'bird', color: '#d9c8ff', id: 'ds-purple', name: 'ゆめ' }} size="small" showPedestal />
+        </div>
+        <div className="character-sprite-strip">
+          {Object.entries(CHARACTER_SPRITES).map(([key, src]) => (
+            <figure className="character-sprite-strip__item" key={key}>
+              <img src={src} alt={key} />
+              <figcaption>{key}</figcaption>
+            </figure>
+          ))}
         </div>
       </Card>
 

@@ -125,7 +125,16 @@ function AppContent() {
             path="/exchange/share"
             element={
               <RequireAuth user={user}>
-                <ExchangePage eggs={eggs} exchanges={exchanges} />
+                <ExchangePage
+                  allEggs={data.eggs}
+                  allPassions={data.passions}
+                  characters={data.characters}
+                  eggs={eggs}
+                  exchanges={exchanges}
+                  onDataChange={setData}
+                  userId={currentUid}
+                  userName={user?.name ?? 'guest'}
+                />
               </RequireAuth>
             }
           />
@@ -133,7 +142,33 @@ function AppContent() {
             path="/exchange/scan"
             element={
               <RequireAuth user={user}>
-                <ExchangePage eggs={eggs} exchanges={exchanges} />
+                <ExchangePage
+                  allEggs={data.eggs}
+                  allPassions={data.passions}
+                  characters={data.characters}
+                  eggs={eggs}
+                  exchanges={exchanges}
+                  onDataChange={setData}
+                  userId={currentUid}
+                  userName={user?.name ?? 'guest'}
+                />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/exchange/receive"
+            element={
+              <RequireAuth user={user}>
+                <ExchangePage
+                  allEggs={data.eggs}
+                  allPassions={data.passions}
+                  characters={data.characters}
+                  eggs={eggs}
+                  exchanges={exchanges}
+                  onDataChange={setData}
+                  userId={currentUid}
+                  userName={user?.name ?? 'guest'}
+                />
               </RequireAuth>
             }
           />

@@ -1,5 +1,5 @@
+import { CharacterIllustration } from '../../components/CharacterIllustration'
 import type { Character, Egg } from '../../../types/models'
-import heroImg from '../../../assets/hero.png'
 
 interface Props {
   character: Character
@@ -19,13 +19,7 @@ export function CharacterAvatar({ character, egg }: Props) {
 
   return (
     <div className="character-chat-header flex flex-col items-center gap-2.5 px-5 pt-5 pb-3 border-b border-[#ff9b37]/20 shrink-0">
-      {/* TODO: Replace hero.png with character-specific generated image from Firebase Storage */}
-      <div
-        className="w-20 h-20 rounded-full overflow-hidden shadow-[var(--shadow)]"
-        style={{ background: egg.color }}
-      >
-        <img src={heroImg} alt={character.name} className="w-full h-full object-cover" />
-      </div>
+      <CharacterIllustration egg={egg} size="medium" showPedestal alt={character.name} />
 
       <div className="flex flex-col items-center gap-0.5 text-center">
         <span className="text-lg font-black text-[#1f1f1f]">
