@@ -2,7 +2,7 @@ import { CharacterCard } from '../features/components/CharacterCard'
 import { EggCard } from '../features/components/EggCard'
 import { EggArt } from '../features/components/EggArt'
 import { Mascot } from '../features/components/Mascot'
-import { Button, Card, EmptyState, Modal, TagInput, TextField } from '../features/components/ui'
+import { Button, Card, EmptyState, Modal, TagInput, Textarea, TextField } from '../components/ui'
 import { getEggForCharacter } from '../lib/viewHelpers'
 import type { Character, Egg } from '../types/models'
 
@@ -39,6 +39,17 @@ export function DevStylePage({ characters, eggs }: DevStylePageProps) {
       </Card>
 
       <Card>
+        <h2 className="text-text-h mb-3">Typography</h2>
+        <div className="grid gap-2">
+          <p className="text-caption text-orange-dark font-extrabold uppercase tracking-wider">caption / eyebrow</p>
+          <p className="text-body-sm text-text">body-sm: 補足説明やカード内の短い説明に使います。</p>
+          <p className="text-body text-text">body: 画面間で共通の本文サイズです。</p>
+          <p className="text-title text-text-h font-black">title: セクションや主要見出し</p>
+          <p className="text-display text-text-h font-black">display: ランディングや強い見出し</p>
+        </div>
+      </Card>
+
+      <Card>
         <h2 className="text-text-h mb-3">Buttons</h2>
         <div className="grid gap-2.5">
           <Button type="button">Primary</Button>
@@ -55,7 +66,7 @@ export function DevStylePage({ characters, eggs }: DevStylePageProps) {
         <h2 className="text-text-h mb-3">Inputs</h2>
         <div className="grid gap-[18px]">
           <TextField label="TextField" placeholder="偏愛タイトル" />
-          <TextField label="Textarea" placeholder="好きの細部を書く" rows={3} multiline />
+          <Textarea label="Textarea" placeholder="好きの細部を書く" rows={3} />
           <TagInput tags={['ラジオ', '夜']} onChange={() => undefined} />
         </div>
       </Card>
