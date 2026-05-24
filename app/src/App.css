@@ -33,6 +33,127 @@
   display: none;
 }
 
+.login-screen {
+  display: grid;
+  place-items: center;
+  min-height: 100%;
+  padding: 38px 28px;
+  background: white;
+}
+
+.login-card {
+  display: grid;
+  justify-items: center;
+  gap: 28px;
+  width: 100%;
+  text-align: center;
+}
+
+.login-card h1 {
+  color: var(--orange);
+  font-size: 32px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.login-mascots {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: end;
+  width: 100%;
+  min-height: 190px;
+  margin: 20px 0 10px;
+}
+
+.login-mascots .mascot {
+  margin: 0 -22px;
+  transform: scale(0.86);
+  filter: drop-shadow(0 18px 20px rgba(255, 155, 55, 0.16));
+}
+
+.login-mascots .mascot:nth-child(1),
+.login-mascots .mascot:nth-child(3) {
+  transform: scale(0.72);
+  opacity: 0.82;
+}
+
+.login-actions {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  max-width: 280px;
+  text-align: left;
+}
+
+.login-actions > span {
+  color: var(--orange);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.google-login-button {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  min-height: 58px;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: white;
+  color: var(--text-h);
+  box-shadow: 0 3px 10px rgba(73, 73, 73, 0.1);
+  text-align: left;
+  cursor: pointer;
+}
+
+.google-login-button:disabled,
+.ui-button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.google-avatar {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  color: #4285f4;
+  background: #f8f8f8;
+  font-weight: 900;
+}
+
+.google-login-button strong,
+.google-login-button small {
+  display: block;
+  line-height: 1.25;
+}
+
+.google-login-button small {
+  color: #777;
+}
+
+.demo-login-note {
+  color: #8d8d8d;
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.auth-error {
+  width: 100%;
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: #fff1df;
+  color: var(--orange-dark);
+  font-size: 13px;
+  font-weight: 800;
+  text-align: left;
+}
+
 .desktop-note {
   max-width: 380px;
   border-radius: 32px;
@@ -680,6 +801,10 @@
   background: linear-gradient(135deg, var(--orange), var(--orange-dark));
   font-size: 34px;
   font-weight: 900;
+}
+
+.avatar-image {
+  object-fit: cover;
 }
 
 .qr-mock {
