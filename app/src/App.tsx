@@ -1,10 +1,10 @@
 import type { CSSProperties, FormEvent } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
-import { BottomNav } from './components/BottomNav'
-import { Button } from './components/ui/Button'
-import { TagInput } from './components/ui/TagInput'
-import { TextField } from './components/ui/TextField'
+import { BottomNav } from './features/components/BottomNav'
+import { Button } from './features/components/ui/Button'
+import { TagInput } from './features/components/ui/TagInput'
+import { TextField } from './features/components/ui/TextField'
 import {
   createPassion,
   getCurrentUser,
