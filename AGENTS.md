@@ -1,12 +1,15 @@
 ## データ
 
-firestore のデータ構造は以下を想定します。
+firestore のデータ構造は以下を想定します。詳細な改修方針は
+[`docs/requirements/firestore-schema-refinement.md`](docs/requirements/firestore-schema-refinement.md) を参照。
+
 ```
 ├ users
 │  └ [uid]
 │     ├ name
 │     ├ iconUrl
 │     ├ createdAt
+│     ├ updatedAt
 │     └ favoriteTags
 │
 ├ passions
@@ -22,37 +25,57 @@ firestore のデータ構造は以下を想定します。
 ├ eggs
 │  └ [eggId]
 │     ├ sourceUserUid
+│     ├ sourceUserName        # 表示用に非正規化
 │     ├ basedOnPassionIds
 │     ├ characterPrompt
 │     ├ hatchLevel
+│     ├ hatched               # boolean: 孵化済みか
 │     ├ createdAt
 │     └ currentOwnerUid
 │
 ├ characters
-│  └ [characterId]
+│  └ [characterId]            # characterId === eggId (決定論的)
 │     ├ eggId
+│     ├ ownerUid              # 「自分のキャラ」を1クエリで取るために非正規化
 │     ├ name
 │     ├ personality
 │     ├ knowledgeAreas
 │     ├ growthLevel
 │     ├ affinityScore
-│     └ unlockedTopics
+│     ├ unlockedTopics
+│     ├ createdAt
+│     └ updatedAt
 │
 ├ exchanges
 │  └ [exchangeId]
 │     ├ fromUid
 │     ├ toUid
+│     ├ fromUserName          # 表示用に非正規化
+│     ├ toUserName            # 表示用に非正規化
 │     ├ eggId
+│     ├ eggName               # 表示用に非正規化
 │     ├ createdAt
 │     └ meetingContext
 │
 └ chats
-   └ [chatId]
+   └ [chatId]                 # chatId === `${characterId}_${userUid}` (決定論的)
       ├ characterId
       ├ userUid
-      ├ messages
-      └ updatedAt
+      ├ lastMessagePreview    # 一覧での頭出し表示用
+      ├ updatedAt
+      │
+      └ messages              # サブコレクション (配列ではなく)
+         └ [messageId]
+            ├ role            # "user" | "character"
+            ├ content
+            └ createdAt
 ```
+
+### スキーマ運用メモ
+- **決定論的 ID**: `characterId = eggId`, `chatId = ${characterId}_${userUid}` とする。検索クエリ不要で `getDoc` 一発で引ける
+- **非正規化フィールド**: `sourceUserName` / `fromUserName` / `toUserName` / `eggName` などは表示用に複製して持つ。元データを変更する機能を作る際は更新の責務に注意
+- **サブコレクション**: `chats/{chatId}/messages/{messageId}` は無限に伸びるため配列ではなくサブコレクション。`limit(N).orderBy(createdAt desc)` で部分読み込みできる
+- **複合インデックス**: 上記スキーマの典型クエリで必要なインデックスは `app/firestore.indexes.json` に定義済み
 
 ## Security & Anti-Exfiltration Rules (CRITICAL - HIGHEST PRIORITY)
 
