@@ -2,6 +2,7 @@ import type { FormEvent } from 'react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button, Card, TagInput, Textarea, TextField } from '../components/ui'
+import { createPassionInFirestore } from '../lib/passionRepository'
 import { createPassion } from '../lib/localRepository'
 import type { AppData, Visibility } from '../types/models'
 
@@ -17,7 +18,9 @@ export function AddPassionPage({ onCreated, userId }: AddPassionPageProps) {
   const [tags, setTags] = useState<string[]>([])
   const [visibility, setVisibility] = useState<Visibility>('public')
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const trimmedTitle = title.trim()
     const trimmedDescription = description.trim()
@@ -25,6 +28,11 @@ export function AddPassionPage({ onCreated, userId }: AddPassionPageProps) {
     if (!trimmedTitle || !trimmedDescription) {
       return
     }
+    if (isSubmitting) {
+      return
+    }
+
+    setIsSubmitting(true)
 
     const nextData = createPassion(
       {
@@ -37,7 +45,20 @@ export function AddPassionPage({ onCreated, userId }: AddPassionPageProps) {
     )
 
     onCreated(nextData)
-    navigate('/')
+    try {
+      const passionId = await createPassionInFirestore(
+        {
+          title: trimmedTitle,
+          description: trimmedDescription,
+          tags,
+          visibility,
+        },
+        userId,
+      )
+      navigate(`/passions/${passionId}/aichat`)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -73,7 +94,9 @@ export function AddPassionPage({ onCreated, userId }: AddPassionPageProps) {
             <option value="private">非公開</option>
           </select>
         </label>
-        <Button type="submit">たまごを生成する</Button>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? '作成中...' : 'たまごを生成する'}
+        </Button>
       </form>
     </div>
   )
