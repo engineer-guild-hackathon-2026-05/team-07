@@ -1,9 +1,122 @@
 rules_version = '2';
 
+// Firestore セキュリティルール
+//
+// 設計方針 (詳細は docs/requirements/firestore-rules.md):
+//   - 認証必須を全体の前提とする
+//   - users/passions/chats は本人 (request.auth.uid) ベースで判定
+//   - eggs/characters は currentOwnerUid / ownerUid フィールドで判定
+//     (characters.ownerUid は schema-refinement で追加した非正規化フィールド)
+//   - eggs/characters/exchanges の create は Cloud Function (admin SDK) のみ
+//     → クライアントからは create 不可。Admin SDK はルールをバイパスするので Functions では書ける
+//   - ownership transfer (eggs.currentOwnerUid 変更) もクライアント不可、Cloud Function 専用
+//   - chats/{chatId}/messages サブコレクションは親 chat の userUid を get() でチェック
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if false;
+
+    // ---------- helpers ----------
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // update 時にあるフィールドが変更されていないことを確認
+    function isUnchanged(field) {
+      return request.resource.data[field] == resource.data[field];
+    }
+
+    // ---------- users/{uid} ----------
+    match /users/{uid} {
+      allow read:   if isSignedIn();
+      allow create: if isSelf(uid);
+      allow update: if isSelf(uid);
+      allow delete: if false;
+    }
+
+    // ---------- passions/{passionId} ----------
+    match /passions/{passionId} {
+      allow read: if isSignedIn() && (
+        resource.data.visibility == 'public' ||
+        resource.data.ownerUid == request.auth.uid
+      );
+      allow create: if isSignedIn()
+                    && request.resource.data.ownerUid == request.auth.uid;
+      allow update: if isSignedIn()
+                    && resource.data.ownerUid == request.auth.uid
+                    && isUnchanged('ownerUid');
+      allow delete: if isSignedIn()
+                    && resource.data.ownerUid == request.auth.uid;
+    }
+
+    // ---------- eggs/{eggId} ----------
+    // 作成は Cloud Function (egg 生成) のみ
+    // 所有者変更 (currentOwnerUid) も Cloud Function (exchange) のみ
+    match /eggs/{eggId} {
+      allow read: if isSignedIn()
+                  && resource.data.currentOwnerUid == request.auth.uid;
+      allow create: if false;
+      allow update: if isSignedIn()
+                    && resource.data.currentOwnerUid == request.auth.uid
+                    && isUnchanged('currentOwnerUid')
+                    && isUnchanged('sourceUserUid');
+      allow delete: if false;
+    }
+
+    // ---------- characters/{characterId} ----------
+    // characterId == eggId (decisive ID), ownerUid フィールドで判定
+    match /characters/{characterId} {
+      allow read: if isSignedIn()
+                  && resource.data.ownerUid == request.auth.uid;
+      allow create: if false;
+      allow update: if isSignedIn()
+                    && resource.data.ownerUid == request.auth.uid
+                    && isUnchanged('ownerUid')
+                    && isUnchanged('eggId');
+      allow delete: if false;
+    }
+
+    // ---------- exchanges/{exchangeId} ----------
+    // 作成・更新ともに Cloud Function 専用、read は当事者のみ
+    match /exchanges/{exchangeId} {
+      allow read: if isSignedIn() && (
+        resource.data.fromUid == request.auth.uid ||
+        resource.data.toUid == request.auth.uid
+      );
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ---------- chats/{chatId} ----------
+    // chatId == `${characterId}_${userUid}` (decisive ID)
+    // userUid フィールドが本人と一致するかで判定
+    match /chats/{chatId} {
+      allow read: if isSignedIn()
+                  && resource.data.userUid == request.auth.uid;
+      allow create: if isSignedIn()
+                    && request.resource.data.userUid == request.auth.uid;
+      allow update: if isSignedIn()
+                    && resource.data.userUid == request.auth.uid
+                    && isUnchanged('userUid')
+                    && isUnchanged('characterId');
+      allow delete: if false;
+
+      // ---------- chats/{chatId}/messages/{messageId} ----------
+      // 親 chat ドキュメントの userUid を取得して所有者チェック
+      // get() は 1 read 分の課金あり (ハッカソン規模では無視可能)
+      match /messages/{messageId} {
+        function parentChat() {
+          return get(/databases/$(database)/documents/chats/$(chatId)).data;
+        }
+        allow read: if isSignedIn() && parentChat().userUid == request.auth.uid;
+        allow create: if isSignedIn() && parentChat().userUid == request.auth.uid;
+        allow update: if false;
+        allow delete: if false;
+      }
     }
   }
 }
