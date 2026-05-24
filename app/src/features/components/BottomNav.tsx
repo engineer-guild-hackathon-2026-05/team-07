@@ -1,33 +1,39 @@
-import type { AppRoute } from '../../types/models'
+import { Link, useLocation } from 'react-router-dom'
 
 type BottomNavProps = {
-  activeRoute: AppRoute
-  onNavigate: (route: AppRoute) => void
+  firstCharacterId?: string
 }
 
-const navItems: Array<{ route: AppRoute; label: string; icon: string }> = [
-  { route: 'home', label: 'Home', icon: '⌂' },
-  { route: 'add', label: '偏愛', icon: '▣' },
-  { route: 'exchange', label: '交換', icon: '⇄' },
-  { route: 'grow', label: '育成', icon: '✦' },
-  { route: 'profile', label: 'Profile', icon: '⚙' },
+const navItems: Array<{ path: string; label: string; icon: string; match?: string }> = [
+  { path: '/', label: 'Home', icon: '⌂' },
+  { path: '/passions/new', label: '偏愛', icon: '▣' },
+  { path: '/exchange/share', label: '交換', icon: '⇄', match: '/exchange' },
+  { path: '/characters', label: '育成', icon: '✦', match: '/characters' },
+  { path: '/profile', label: 'Profile', icon: '⚙' },
 ]
 
-export function BottomNav({ activeRoute, onNavigate }: BottomNavProps) {
+export function BottomNav({ firstCharacterId }: BottomNavProps) {
+  const location = useLocation()
+
   return (
     <nav className="bottom-nav" aria-label="メインナビゲーション">
-      {navItems.map((item) => (
-        <button
-          type="button"
-          key={item.route}
-          className={activeRoute === item.route ? 'is-active' : ''}
-          onClick={() => onNavigate(item.route)}
-          aria-label={item.label}
-        >
-          <span>{item.icon}</span>
-          <small>{item.label}</small>
-        </button>
-      ))}
+      {navItems.map((item) => {
+        const path = item.path === '/characters' && firstCharacterId ? `/characters/${firstCharacterId}` : item.path
+        const isActive =
+          item.path === '/' ? location.pathname === '/' : location.pathname.startsWith(item.match ?? item.path)
+
+        return (
+          <Link
+            key={item.path}
+            to={path}
+            className={isActive ? 'is-active' : ''}
+            aria-label={item.label}
+          >
+            <span>{item.icon}</span>
+            <small>{item.label}</small>
+          </Link>
+        )
+      })}
     </nav>
   )
 }
