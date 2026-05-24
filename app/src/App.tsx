@@ -1,13 +1,16 @@
 import type { CSSProperties, FormEvent } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import type { User as FirebaseUser } from 'firebase/auth'
+import { GoogleAuthProvider, onAuthStateChanged, signInAnonymously, signInWithPopup, signOut } from 'firebase/auth'
+import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore'
 import './App.css'
 import { BottomNav } from './features/components/BottomNav'
 import { Button } from './features/components/ui/Button'
 import { TagInput } from './features/components/ui/TagInput'
 import { TextField } from './features/components/ui/TextField'
+import { auth, db } from './firebase/firebase'
 import {
   createPassion,
-  getCurrentUser,
   getMyCharacters,
   getMyEggs,
   getMyPassions,
@@ -34,6 +37,45 @@ const formatShortDate = (value: string) =>
 
 const getEggForCharacter = (eggs: Egg[], character: Character) =>
   eggs.find((egg) => egg.id === character.eggId)
+
+const toAppUser = (firebaseUser: FirebaseUser): User => ({
+  uid: firebaseUser.uid,
+  name: firebaseUser.displayName ?? (firebaseUser.isAnonymous ? 'guest user' : 'user'),
+  iconUrl: firebaseUser.photoURL ?? undefined,
+  createdAt: new Date().toISOString(),
+  favoriteTags: [],
+})
+
+const demoUser: User = {
+  uid: 'local-user-m-takahashi',
+  name: 'm.takahashi',
+  createdAt: new Date().toISOString(),
+  favoriteTags: ['カフェ巡り', '深夜ラジオ', '文房具'],
+}
+
+const ensureUserDocument = async (firebaseUser: FirebaseUser) => {
+  const userRef = doc(db, 'users', firebaseUser.uid)
+  const userSnap = await getDoc(userRef)
+
+  if (userSnap.exists()) {
+    await setDoc(
+      userRef,
+      {
+        name: firebaseUser.displayName ?? (firebaseUser.isAnonymous ? 'guest user' : 'user'),
+        iconUrl: firebaseUser.photoURL ?? '',
+      },
+      { merge: true },
+    )
+    return
+  }
+
+  await setDoc(userRef, {
+    name: firebaseUser.displayName ?? (firebaseUser.isAnonymous ? 'guest user' : 'user'),
+    iconUrl: firebaseUser.photoURL ?? '',
+    createdAt: serverTimestamp(),
+    favoriteTags: [],
+  })
+}
 
 function Mascot({ egg, size = 'large' }: { egg?: Egg; size?: 'large' | 'small' }) {
   return (
@@ -74,6 +116,54 @@ function HeaderBar({ user, onReset }: { user: User; onReset: () => void }) {
         reset
       </button>
     </header>
+  )
+}
+
+function LoginScreen({
+  authError,
+  isLoading,
+  onGoogleLogin,
+  onAnonymousLogin,
+  onDemoLogin,
+}: {
+  authError: string
+  isLoading: boolean
+  onGoogleLogin: () => void
+  onAnonymousLogin: () => void
+  onDemoLogin: () => void
+}) {
+  return (
+    <div className="login-screen">
+      <section className="login-card">
+        <p className="eyebrow">偏愛キャラクター育成アプリ</p>
+        <h1>サービス名</h1>
+        <div className="login-mascots" aria-label="サービスのキャラクター">
+          <Mascot size="small" egg={{ color: '#d9c8ff' } as Egg} />
+          <Mascot size="small" egg={{ color: '#ffb6d9' } as Egg} />
+          <Mascot size="small" egg={{ color: '#ffe1a8' } as Egg} />
+        </div>
+
+        <div className="login-actions">
+          <span>Google login</span>
+          <button type="button" className="google-login-button" onClick={onGoogleLogin} disabled={isLoading}>
+            <span className="google-avatar">G</span>
+            <span>
+              <strong>Sign in with Google</strong>
+              <small>偏愛の卵を受け取る</small>
+            </span>
+          </button>
+          <Button type="button" variant="secondary" onClick={onAnonymousLogin} disabled={isLoading}>
+            ゲストではじめる
+          </Button>
+          <Button type="button" variant="ghost" onClick={onDemoLogin} disabled={isLoading}>
+            デモとして見る
+          </Button>
+          <small className="demo-login-note">Firebaseに接続せず、ログイン後のUIだけ確認します。</small>
+        </div>
+
+        {authError ? <p className="auth-error">{authError}</p> : null}
+      </section>
+    </div>
   )
 }
 
@@ -140,8 +230,10 @@ function HomeScreen({
 
 function AddPassionScreen({
   onCreated,
+  userId,
 }: {
   onCreated: (data: AppData) => void
+  userId: string
 }) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -157,12 +249,15 @@ function AddPassionScreen({
       return
     }
 
-    const nextData = createPassion({
-      title: trimmedTitle,
-      description: trimmedDescription,
-      tags,
-      visibility,
-    })
+    const nextData = createPassion(
+      {
+        title: trimmedTitle,
+        description: trimmedDescription,
+        tags,
+        visibility,
+      },
+      userId,
+    )
 
     setTitle('')
     setDescription('')
@@ -460,17 +555,23 @@ function ProfileScreen({
   eggs,
   characters,
   exchanges,
+  onLogout,
 }: {
   user: User
   passions: Passion[]
   eggs: Egg[]
   characters: Character[]
   exchanges: Exchange[]
+  onLogout: () => void
 }) {
   return (
     <div className="screen">
       <section className="panel profile-card">
-        <div className="avatar">{user.name.slice(0, 1).toUpperCase()}</div>
+        {user.iconUrl ? (
+          <img className="avatar avatar-image" src={user.iconUrl} alt={`${user.name}のアイコン`} />
+        ) : (
+          <div className="avatar">{user.name.slice(0, 1).toUpperCase()}</div>
+        )}
         <h1>{user.name}</h1>
         <p>偏愛 {passions.length}件 / 卵 {eggs.length}個 / 育成キャラ {characters.length}体</p>
       </section>
@@ -520,10 +621,10 @@ function ProfileScreen({
       </section>
 
       <section className="panel logout-panel">
-        <Button type="button" variant="ghost">
+        <Button type="button" variant="ghost" onClick={onLogout}>
           ログアウト
         </Button>
-        <p>ローカルMVPでは見た目のみ。Firebase Auth接続時に実処理を入れます。</p>
+        <p>Firebase Authからログアウトします。</p>
       </section>
     </div>
   )
@@ -548,15 +649,82 @@ function Meter({ label, value }: { label: string; value: number }) {
 function App() {
   const [activeRoute, setActiveRoute] = useState<AppRoute>('home')
   const [data, setData] = useState<AppData>(loadAppData)
+  const [authUser, setAuthUser] = useState<FirebaseUser | null>(null)
+  const [localDemoUser, setLocalDemoUser] = useState<User | null>(null)
+  const [isAuthReady, setIsAuthReady] = useState(false)
+  const [authError, setAuthError] = useState('')
+  const [isAuthActionLoading, setIsAuthActionLoading] = useState(false)
 
-  const user = useMemo(() => getCurrentUser(data), [data])
-  const passions = useMemo(() => getMyPassions(data, user.uid), [data, user.uid])
-  const eggs = useMemo(() => getMyEggs(data, user.uid), [data, user.uid])
-  const characters = useMemo(() => getMyCharacters(data, user.uid), [data, user.uid])
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setAuthError('')
+      setAuthUser(firebaseUser)
+      setIsAuthReady(true)
+
+      if (firebaseUser) {
+        try {
+          await ensureUserDocument(firebaseUser)
+        } catch {
+          setAuthError('ユーザー情報の保存に失敗しました。Firestoreルールを確認してください。')
+        }
+      }
+    })
+
+    return unsubscribe
+  }, [])
+
+  const user = useMemo(() => (authUser ? toAppUser(authUser) : localDemoUser), [authUser, localDemoUser])
+  const currentUid = user?.uid ?? ''
+  const passions = useMemo(() => (currentUid ? getMyPassions(data, currentUid) : []), [data, currentUid])
+  const eggs = useMemo(() => (currentUid ? getMyEggs(data, currentUid) : []), [data, currentUid])
+  const characters = useMemo(() => (currentUid ? getMyCharacters(data, currentUid) : []), [data, currentUid])
   const exchanges = useMemo(
-    () => data.exchanges.filter((exchange) => exchange.fromUid === user.uid || exchange.toUid === user.uid),
-    [data.exchanges, user.uid],
+    () => data.exchanges.filter((exchange) => exchange.fromUid === currentUid || exchange.toUid === currentUid),
+    [data.exchanges, currentUid],
   )
+
+  const handleGoogleLogin = async () => {
+    try {
+      setIsAuthActionLoading(true)
+      setAuthError('')
+      setLocalDemoUser(null)
+      const provider = new GoogleAuthProvider()
+      const result = await signInWithPopup(auth, provider)
+      await ensureUserDocument(result.user)
+    } catch {
+      setAuthError('Googleログインに失敗しました。Firebase AuthのGoogle provider設定を確認してください。')
+    } finally {
+      setIsAuthActionLoading(false)
+    }
+  }
+
+  const handleAnonymousLogin = async () => {
+    try {
+      setIsAuthActionLoading(true)
+      setAuthError('')
+      setLocalDemoUser(null)
+      const result = await signInAnonymously(auth)
+      await ensureUserDocument(result.user)
+    } catch {
+      setAuthError('ゲストログインに失敗しました。Firebase Authの匿名ログイン設定を確認してください。')
+    } finally {
+      setIsAuthActionLoading(false)
+    }
+  }
+
+  const handleLogout = async () => {
+    if (auth.currentUser) {
+      await signOut(auth)
+    }
+    setLocalDemoUser(null)
+    setActiveRoute('home')
+  }
+
+  const handleDemoLogin = () => {
+    setAuthError('')
+    setLocalDemoUser(demoUser)
+    setActiveRoute('home')
+  }
 
   const resetLocalDemo = () => {
     setData(resetDemoData())
@@ -566,6 +734,42 @@ function App() {
   const handleCreated = (nextData: AppData) => {
     setData(nextData)
     setActiveRoute('home')
+  }
+
+  if (!isAuthReady) {
+    return (
+      <main className="app-shell">
+        <div className="phone-frame">
+          <div className="login-screen">
+            <section className="login-card">
+              <p className="eyebrow">loading</p>
+              <h1>準備中...</h1>
+            </section>
+          </div>
+        </div>
+      </main>
+    )
+  }
+
+  if (!user) {
+    return (
+      <main className="app-shell">
+        <div className="phone-frame">
+          <LoginScreen
+            authError={authError}
+            isLoading={isAuthActionLoading}
+            onGoogleLogin={handleGoogleLogin}
+            onAnonymousLogin={handleAnonymousLogin}
+            onDemoLogin={handleDemoLogin}
+          />
+        </div>
+        <aside className="desktop-note">
+          <p className="eyebrow">ux-01</p>
+          <h2>Firebase Authログイン</h2>
+          <p>Google/ゲストログインはFirebase接続、デモはローカルだけでログイン後UIを確認できます。</p>
+        </aside>
+      </main>
+    )
   }
 
   const screen = {
@@ -579,7 +783,7 @@ function App() {
         onReset={resetLocalDemo}
       />
     ),
-    add: <AddPassionScreen onCreated={handleCreated} />,
+    add: <AddPassionScreen onCreated={handleCreated} userId={user.uid} />,
     exchange: <ExchangeScreen eggs={eggs} exchanges={exchanges} />,
     grow: <GrowScreen eggs={eggs} characters={characters} />,
     profile: (
@@ -589,6 +793,7 @@ function App() {
         eggs={eggs}
         characters={characters}
         exchanges={exchanges}
+        onLogout={handleLogout}
       />
     ),
   }[activeRoute]
