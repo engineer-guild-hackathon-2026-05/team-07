@@ -1,4 +1,4 @@
-import type { AppRoute } from '../types/models'
+import type { AppRoute } from '../../types/models'
 
 type BottomNavProps = {
   activeRoute: AppRoute
