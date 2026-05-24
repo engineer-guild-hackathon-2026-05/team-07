@@ -101,7 +101,7 @@ export interface PassionDoc {
   /** Creation time */
   createdAt: DateLike;
   /** Visibility scope */
-  visibility: "public" | "private";
+  visibility: "public" | "friends" | "private";
 }
 
 /** eggs/{eggId} */
