@@ -5,6 +5,12 @@ import { Button, Card, TagInput, TextField } from '../features/components/ui'
 import { createPassion } from '../lib/localRepository'
 import type { AppData, Visibility } from '../types/models'
 
+const screenClasses =
+  'h-full overflow-y-auto box-border px-[22px] pt-7 pb-28 flex flex-col gap-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
+
+const selectClasses =
+  'w-full box-border border-2 border-border rounded-md px-4 py-3.5 bg-cream-light text-text-h font-[inherit]'
+
 type AddPassionPageProps = {
   onCreated: (data: AppData) => void
   userId: string
@@ -41,14 +47,14 @@ export function AddPassionPage({ onCreated, userId }: AddPassionPageProps) {
   }
 
   return (
-    <div className="screen">
-      <Card className="add-intro">
-        <p className="eyebrow">char-01</p>
-        <h1>偏愛をことばにする</h1>
-        <p>好きなポイントを入力すると、ローカルの仮ロジックで卵とキャラを生成します。</p>
+    <div className={screenClasses}>
+      <Card>
+        <p className="text-orange-dark text-xs font-extrabold uppercase tracking-wider">char-01</p>
+        <h1 className="text-[30px] leading-[1.18] text-text-h">偏愛をことばにする</h1>
+        <p className="text-text">好きなポイントを入力すると、ローカルの仮ロジックで卵とキャラを生成します。</p>
       </Card>
 
-      <form className="panel form-panel" onSubmit={handleSubmit}>
+      <form className="border border-orange/12 rounded-lg bg-white shadow-soft p-5 grid gap-[18px]" onSubmit={handleSubmit}>
         <TextField
           label="タイトル"
           value={title}
@@ -66,9 +72,13 @@ export function AddPassionPage({ onCreated, userId }: AddPassionPageProps) {
           required
         />
         <TagInput tags={tags} onChange={setTags} />
-        <label className="field">
-          <span>公開範囲</span>
-          <select value={visibility} onChange={(event) => setVisibility(event.target.value as Visibility)}>
+        <label className="grid gap-3">
+          <span className="text-text-h font-black">公開範囲</span>
+          <select
+            className={selectClasses}
+            value={visibility}
+            onChange={(event) => setVisibility(event.target.value as Visibility)}
+          >
             <option value="public">公開</option>
             <option value="friends">交換した人だけ</option>
             <option value="private">非公開</option>

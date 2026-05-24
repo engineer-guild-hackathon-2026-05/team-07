@@ -9,8 +9,8 @@ export function ChatBubble({ message }: Props) {
   return (
     <div className={`max-w-[76%] rounded-[20px] px-3.5 py-2.5 text-sm leading-relaxed ${
       isUser
-        ? 'self-end bg-[#ff9b37] text-white rounded-br-[4px]'
-        : 'self-start bg-[#fff1df] text-[#494949] rounded-bl-[4px]'
+        ? 'self-end bg-orange text-white rounded-br-[4px]'
+        : 'self-start bg-cream-tab text-text rounded-bl-[4px]'
     }`}>
       {message.content}
     </div>

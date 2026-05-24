@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
 import { useMemo, useState } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import './App.css'
 import { BottomNav } from './features/components/BottomNav'
 import { Button } from './features/components/ui'
 import { useAuth } from './firebase/auth'
@@ -15,14 +14,17 @@ import { LoginPage } from './pages/Login'
 import { ProfilePage } from './pages/Profile'
 import type { AppData, User } from './types/models'
 
+const phoneFrameClasses =
+  'relative w-full max-w-[390px] h-[min(820px,calc(100svh-56px))] min-h-[680px] overflow-hidden border-[10px] border-[#f4f4f4] rounded-[34px] bg-surface shadow-[0_24px_70px_rgba(73,73,73,0.18)] max-[820px]:w-full max-[820px]:h-svh max-[820px]:min-h-svh max-[820px]:border-0 max-[820px]:rounded-none'
+
 function LoadingScreen() {
   return (
-    <main className="app-shell">
-      <div className="phone-frame">
-        <div className="login-screen">
-          <section className="login-card">
-            <p className="eyebrow">loading</p>
-            <h1>準備中...</h1>
+    <main className="grid grid-cols-[minmax(320px,390px)_minmax(260px,420px)] gap-[42px] items-center justify-center min-h-svh p-7 text-left max-[820px]:block max-[820px]:min-h-svh max-[820px]:p-0">
+      <div className={phoneFrameClasses}>
+        <div className="grid place-items-center min-h-full px-7 py-[38px] bg-white">
+          <section className="grid justify-items-center gap-7 w-full text-center">
+            <p className="text-orange-dark text-xs font-extrabold uppercase tracking-wider">loading</p>
+            <h1 className="text-orange text-[32px] font-black tracking-widest">準備中...</h1>
           </section>
         </div>
       </div>
@@ -82,8 +84,8 @@ function AppContent() {
   }
 
   return (
-    <main className="app-shell">
-      <div className="phone-frame">
+    <main className="grid grid-cols-[minmax(320px,390px)_minmax(260px,420px)] gap-[42px] items-center justify-center min-h-svh p-7 text-left max-[820px]:block max-[820px]:min-h-svh max-[820px]:p-0">
+      <div className={phoneFrameClasses}>
         <Routes>
           <Route
             path="/login"
@@ -180,12 +182,12 @@ function AppContent() {
         </Routes>
         {user ? <BottomNav firstCharacterId={characters[0]?.id} /> : null}
       </div>
-      <aside className="desktop-note">
-        <p className="eyebrow">UI/UX Local MVP</p>
-        <h2>課金なしで確認できる接続前UI</h2>
-        <p>FirestoreやFunctionsへは接続せず、UIはlocalStorageで確認できます。</p>
+      <aside className="max-w-[380px] rounded-[32px] p-[34px] bg-white shadow-default max-[820px]:hidden">
+        <p className="text-orange-dark text-xs font-extrabold uppercase tracking-wider">UI/UX Local MVP</p>
+        <h2 className="my-2 mb-3 text-[34px] leading-[1.08] text-text-h">課金なしで確認できる接続前UI</h2>
+        <p className="text-text">FirestoreやFunctionsへは接続せず、UIはlocalStorageで確認できます。</p>
         {user ? (
-          <Button type="button" variant="secondary" onClick={() => navigate('/dev/style')}>
+          <Button type="button" variant="secondary" className="mt-4" onClick={() => navigate('/dev/style')}>
             Design Systemを見る
           </Button>
         ) : null}

@@ -76,9 +76,12 @@ export function CharacterDetailPage({ characters, eggs, userId = FALLBACK_USER_I
   const character = characters.find((item) => item.id === characterId)
   const egg = character ? getEggForCharacter(eggs, character) : undefined
 
+  const screenClasses =
+    'h-full overflow-y-auto box-border px-[22px] pt-7 pb-28 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
+
   if (!character) {
     return (
-      <div className="screen">
+      <div className={screenClasses}>
         <EmptyState title="育成中キャラがいません" description="偏愛登録から生まれたキャラをここで育てます。" />
       </div>
     )
@@ -86,7 +89,7 @@ export function CharacterDetailPage({ characters, eggs, userId = FALLBACK_USER_I
 
   if (!egg) {
     return (
-      <div className="screen">
+      <div className={screenClasses}>
         <EmptyState title="卵が見つかりません" description="キャラクターに紐づく卵データを確認してください。" />
       </div>
     )
@@ -153,12 +156,12 @@ function CharacterChat({ character, egg, userId }: { character: Character; egg: 
   )
 
   return (
-    <div className="screen !p-0 flex flex-col">
+    <div className="h-full overflow-y-auto box-border !p-0 flex flex-col [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       <CharacterAvatar character={character} egg={egg} />
 
       <div className="flex-1 overflow-y-auto flex flex-col gap-2.5 px-4 py-3.5" style={{ paddingBottom: '176px' }}>
         {chat.messages.length === 0 ? (
-          <p className="text-center text-sm text-[#494949]/60 mt-6">はじめて話しかけてみよう</p>
+          <p className="text-center text-sm text-text/60 mt-6">はじめて話しかけてみよう</p>
         ) : null}
         {chat.messages.map((message) => (
           <ChatBubble key={message.id} message={message} />
@@ -167,11 +170,14 @@ function CharacterChat({ character, egg, userId }: { character: Character; egg: 
       </div>
 
       <section className="px-4 pb-[184px]">
-        <div className="panel">
-          <h2>解放済みトピック</h2>
-          <div className="tag-list">
+        <div className="border border-orange/12 rounded-lg bg-white shadow-soft p-5">
+          <h2 className="text-text-h mb-3">解放済みトピック</h2>
+          <div className="flex flex-wrap gap-2">
             {character.unlockedTopics.map((topic) => (
-              <span className="tag-chip tag-chip--static" key={topic}>
+              <span
+                className="rounded-full px-[11px] py-[7px] bg-tag-bg text-tag-text text-[13px] font-extrabold"
+                key={topic}
+              >
                 {topic}
               </span>
             ))}

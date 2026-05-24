@@ -14,10 +14,22 @@ export function Modal({ children, isOpen, onClose, title }: ModalProps) {
   }
 
   return (
-    <div className="modal-backdrop" role="presentation" onClick={onClose}>
-      <section className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" onClick={(event) => event.stopPropagation()}>
-        <div className="section-title-row">
-          <h2 id="modal-title">{title}</h2>
+    <div
+      className="absolute inset-0 z-10 grid place-items-center p-6 bg-text-h/34"
+      role="presentation"
+      onClick={onClose}
+    >
+      <section
+        className="w-full rounded-lg p-5 bg-white shadow-default"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex justify-between items-center gap-3 mb-3">
+          <h2 id="modal-title" className="text-text-h">
+            {title}
+          </h2>
           <Button type="button" variant="ghost" onClick={onClose}>
             閉じる
           </Button>

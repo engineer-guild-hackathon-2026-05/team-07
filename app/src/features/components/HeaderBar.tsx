@@ -8,10 +8,12 @@ type HeaderBarProps = {
 
 export function HeaderBar({ action, subtitle, title }: HeaderBarProps) {
   return (
-    <header className="app-header">
+    <header className="grid grid-cols-[1fr_auto] gap-2.5 items-start mb-[22px]">
       <div>
-        <span className="eyebrow">{subtitle ?? 'HenAi Egg'}</span>
-        <h1>{title}</h1>
+        <span className="text-orange-dark text-xs font-extrabold uppercase tracking-wider">
+          {subtitle ?? 'HenAi Egg'}
+        </span>
+        <h1 className="text-orange-dark text-[22px] font-black tracking-wide">{title}</h1>
       </div>
       {action}
     </header>

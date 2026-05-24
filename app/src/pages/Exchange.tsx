@@ -6,6 +6,12 @@ import { Button, Card, TextField } from '../features/components/ui'
 import { formatShortDate } from '../lib/viewHelpers'
 import type { Egg, Exchange } from '../types/models'
 
+const screenClasses =
+  'h-full overflow-y-auto box-border px-[22px] pt-7 pb-28 flex flex-col gap-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
+
+const selectClasses =
+  'w-full box-border border-2 border-border rounded-md px-4 py-3.5 bg-cream-light text-text-h font-[inherit]'
+
 type BarcodeDetectorConstructor = new (options?: { formats?: string[] }) => {
   detect: (source: CanvasImageSource) => Promise<Array<{ rawValue: string }>>
 }
@@ -102,34 +108,54 @@ export function ExchangePage({ eggs, exchanges }: ExchangePageProps) {
   }
 
   return (
-    <div className="screen">
-      <Card className="exchange-hero">
-        <p className="eyebrow">exch-01 / exch-02</p>
-        <h1>卵を交換する</h1>
-        <p>相手のQRを読む、自分のQRを見せる、どちらもこの画面で行います。</p>
-        <div className="segment-tabs">
-          <Link to="/exchange/share">見せる</Link>
-          <Link to="/exchange/scan">読み取る</Link>
+    <div className={screenClasses}>
+      <Card className="grid gap-2">
+        <p className="text-orange-dark text-xs font-extrabold uppercase tracking-wider">exch-01 / exch-02</p>
+        <h1 className="text-text-h">卵を交換する</h1>
+        <p className="text-text">相手のQRを読む、自分のQRを見せる、どちらもこの画面で行います。</p>
+        <div className="grid grid-cols-2 gap-2 rounded-md p-1.5 bg-cream-tab">
+          <Link
+            to="/exchange/share"
+            className="grid place-items-center min-h-[42px] rounded-sm text-orange-dark bg-white font-black"
+          >
+            見せる
+          </Link>
+          <Link
+            to="/exchange/scan"
+            className="grid place-items-center min-h-[42px] rounded-sm text-orange-dark bg-white font-black"
+          >
+            読み取る
+          </Link>
         </div>
       </Card>
 
-      <section className="exchange-duo">
-        <Card className="center-panel exchange-card">
-          <div className="section-title-row">
-            <h2>相手のQRを読む</h2>
-            <span>{cameraStatus === 'scanning' ? '読み取り中' : 'scan'}</span>
+      <section className="grid gap-3.5 mt-3.5">
+        <Card className="grid justify-items-center gap-3.5 text-center">
+          <div className="flex justify-between items-center gap-3 w-full">
+            <h2 className="text-text-h">相手のQRを読む</h2>
+            <span className="text-orange-dark text-xs font-extrabold">
+              {cameraStatus === 'scanning' ? '読み取り中' : 'scan'}
+            </span>
           </div>
-          <div className="camera-frame">
-            <video ref={videoRef} muted playsInline aria-label="QR読み取りカメラ" />
+          <div className="camera-frame relative w-full aspect-square overflow-hidden rounded-lg bg-text-h">
+            <video
+              ref={videoRef}
+              className="absolute inset-0 w-full h-full object-cover"
+              muted
+              playsInline
+              aria-label="QR読み取りカメラ"
+            />
             {cameraStatus !== 'scanning' && cameraStatus !== 'previewOnly' ? (
-              <div className="camera-placeholder">
-                <span>QR</span>
+              <div className="absolute inset-0 grid place-items-center content-center gap-2.5 p-6 text-white text-center bg-gradient-to-br from-orange/90 via-mint/78 to-text">
+                <span className="grid place-items-center w-24 h-24 border-8 border-white rounded-[20px] font-black">
+                  QR
+                </span>
                 <p>枠の中に相手のQRを合わせます</p>
               </div>
             ) : null}
             <i />
           </div>
-          <div className="camera-actions">
+          <div className="w-full">
             {cameraStatus === 'scanning' || cameraStatus === 'previewOnly' ? (
               <Button type="button" variant="secondary" onClick={stopCamera}>
                 カメラを止める
@@ -141,33 +167,35 @@ export function ExchangePage({ eggs, exchanges }: ExchangePageProps) {
             )}
           </div>
           {cameraStatus === 'previewOnly' ? (
-            <p className="status-message">
+            <p className="w-full rounded-md px-3.5 py-3 bg-cream text-left text-text">
               カメラは使えますが、このブラウザはQR自動検出に未対応です。下の手入力で動線確認できます。
             </p>
           ) : null}
           {cameraStatus === 'unsupported' ? (
-            <p className="status-message">
+            <p className="w-full rounded-md px-3.5 py-3 bg-cream text-left text-text">
               このブラウザまたは表示URLではカメラを起動できません。HTTPS、localhost、ブラウザ権限を確認してください。
             </p>
           ) : null}
           {cameraStatus === 'error' ? (
-            <p className="status-message">カメラを起動できませんでした。権限やHTTPS設定を確認してください。</p>
+            <p className="w-full rounded-md px-3.5 py-3 bg-cream text-left text-text">
+              カメラを起動できませんでした。権限やHTTPS設定を確認してください。
+            </p>
           ) : null}
           {scanResult ? (
-            <div className="scan-result">
-              <span>読み取り結果</span>
-              <strong>{scanResult}</strong>
-              <p>本番ではこの値を交換Functionへ渡して、卵の所有者を更新します。</p>
+            <div className="grid gap-1.5 w-full rounded-md px-3.5 py-3 bg-tag-bg text-left">
+              <span className="text-tag-text text-xs font-black">読み取り結果</span>
+              <strong className="break-all text-text-h">{scanResult}</strong>
+              <p className="text-text">本番ではこの値を交換Functionへ渡して、卵の所有者を更新します。</p>
             </div>
           ) : null}
         </Card>
 
-        <Card className="center-panel exchange-card">
-          <div className="section-title-row">
-            <h2>自分のQRを見せる</h2>
-            <span>share</span>
+        <Card className="grid justify-items-center gap-4 text-left">
+          <div className="flex justify-between items-center gap-3 w-full">
+            <h2 className="text-text-h">自分のQRを見せる</h2>
+            <span className="text-orange-dark text-xs font-extrabold">share</span>
           </div>
-          <div className="own-qr-card" aria-label="自分の交換QR">
+          <div className="grid grid-cols-[132px_1fr] gap-3.5 items-center w-full rounded-3xl p-3.5 bg-cream" aria-label="自分の交換QR">
             <div className="qr-mock qr-mock--share">
               <span />
               <span />
@@ -175,13 +203,17 @@ export function ExchangePage({ eggs, exchanges }: ExchangePageProps) {
               <strong>QR</strong>
             </div>
             <div>
-              <p>渡す卵</p>
-              <strong>{selectedEgg?.name ?? '卵がありません'}</strong>
+              <p className="mb-1 text-orange-dark text-xs font-black">渡す卵</p>
+              <strong className="text-text-h text-xl leading-tight">{selectedEgg?.name ?? '卵がありません'}</strong>
             </div>
           </div>
-          <label className="field compact-field">
-            <span>見せる卵を選ぶ</span>
-            <select value={selectedEgg?.id ?? ''} onChange={(event) => setSelectedEggId(event.target.value)}>
+          <label className="grid gap-2 w-full">
+            <span className="text-text-h font-black">見せる卵を選ぶ</span>
+            <select
+              className={selectClasses}
+              value={selectedEgg?.id ?? ''}
+              onChange={(event) => setSelectedEggId(event.target.value)}
+            >
               {eggs.map((egg) => (
                 <option value={egg.id} key={egg.id}>
                   {egg.name} / 孵化 {egg.hatchLevel}%
@@ -189,15 +221,20 @@ export function ExchangePage({ eggs, exchanges }: ExchangePageProps) {
               ))}
             </select>
           </label>
-          <div className="share-code">
-            <span>交換コード</span>
-            <strong>{shareCode}</strong>
+          <div className="grid gap-1 w-full rounded-md px-3.5 py-3 bg-tag-bg">
+            <span className="text-tag-text text-xs font-black">交換コード</span>
+            <strong className="break-all text-text-h text-[13px]">{shareCode}</strong>
           </div>
-          <p className="status-message">本番ではこのコードを実QRにして、一時トークン付きで表示します。</p>
+          <p className="w-full rounded-md px-3.5 py-3 bg-cream text-text">
+            本番ではこのコードを実QRにして、一時トークン付きで表示します。
+          </p>
         </Card>
       </section>
 
-      <form className="panel manual-scan-form" onSubmit={submitManualCode}>
+      <form
+        className="border border-orange/12 rounded-lg bg-white shadow-soft p-5 grid gap-3 mt-3.5"
+        onSubmit={submitManualCode}
+      >
         <TextField
           label="読み取りコードを手入力"
           value={manualCode}
@@ -209,28 +246,31 @@ export function ExchangePage({ eggs, exchanges }: ExchangePageProps) {
         </Button>
       </form>
 
-      <div className="egg-scroll">
+      <div className="grid gap-3 mt-4">
         {eggs.map((egg) => (
-          <article className="mini-card" key={egg.id}>
+          <article
+            className="grid grid-cols-[86px_1fr] gap-3 items-center border border-orange/12 rounded-lg bg-white shadow-soft p-3.5"
+            key={egg.id}
+          >
             <EggArt egg={egg} />
             <div>
-              <strong>{egg.name}</strong>
-              <p>孵化 {egg.hatchLevel}%</p>
+              <strong className="text-text-h">{egg.name}</strong>
+              <p className="text-text">孵化 {egg.hatchLevel}%</p>
             </div>
           </article>
         ))}
       </div>
 
       <Card>
-        <h2>交換履歴</h2>
-        <div className="passion-stack">
+        <h2 className="text-text-h mb-3">交換履歴</h2>
+        <div className="grid gap-3">
           {exchanges.map((exchange) => (
-            <article className="passion-row" key={exchange.id}>
+            <article className="grid grid-cols-[1fr_auto] gap-3 items-start p-3.5 rounded-md bg-cream" key={exchange.id}>
               <div>
-                <strong>{exchange.meetingContext}</strong>
-                <p>eggId: {exchange.eggId}</p>
+                <strong className="block mb-1 text-text-h">{exchange.meetingContext}</strong>
+                <p className="text-text">eggId: {exchange.eggId}</p>
               </div>
-              <span>{formatShortDate(exchange.createdAt)}</span>
+              <span className="text-orange-dark text-xs font-extrabold">{formatShortDate(exchange.createdAt)}</span>
             </article>
           ))}
         </div>

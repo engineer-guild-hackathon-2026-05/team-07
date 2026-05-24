@@ -15,18 +15,24 @@ type TextAreaFieldProps = BaseProps &
     multiline: true
   }
 
+const inputClasses =
+  'w-full box-border border-2 border-border rounded-md px-4 py-3.5 bg-cream-light text-text-h font-[inherit]'
+
 export function TextField(props: TextFieldProps | TextAreaFieldProps) {
   const { label, helperText, multiline, className = '', ...fieldProps } = props
 
   return (
-    <label className={`field ${className}`.trim()}>
-      <span>{label}</span>
+    <label className={`grid gap-3 ${className}`.trim()}>
+      <span className="text-text-h font-black">{label}</span>
       {multiline ? (
-        <textarea {...(fieldProps as TextareaHTMLAttributes<HTMLTextAreaElement>)} />
+        <textarea
+          className={`${inputClasses} resize-y`}
+          {...(fieldProps as TextareaHTMLAttributes<HTMLTextAreaElement>)}
+        />
       ) : (
-        <input {...(fieldProps as InputHTMLAttributes<HTMLInputElement>)} />
+        <input className={inputClasses} {...(fieldProps as InputHTMLAttributes<HTMLInputElement>)} />
       )}
-      {helperText ? <small>{helperText}</small> : null}
+      {helperText ? <small className="text-[#8d8d8d] text-xs">{helperText}</small> : null}
     </label>
   )
 }

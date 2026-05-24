@@ -6,6 +6,9 @@ import { Button, Card, EmptyState, Modal, TagInput, TextField } from '../feature
 import { getEggForCharacter } from '../lib/viewHelpers'
 import type { Character, Egg } from '../types/models'
 
+const screenClasses =
+  'h-full overflow-y-auto box-border px-[22px] pt-7 pb-28 flex flex-col gap-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
+
 type DevStylePageProps = {
   characters: Character[]
   eggs: Egg[]
@@ -16,26 +19,28 @@ export function DevStylePage({ characters, eggs }: DevStylePageProps) {
   const egg = character ? getEggForCharacter(eggs, character) : eggs[0]
 
   return (
-    <div className="screen">
-      <Card className="style-hero">
-        <p className="eyebrow">ux-06</p>
-        <h1>Design System</h1>
-        <p>色、余白、radius、shadow、主要コンポーネントの実物を確認するための開発用ページです。</p>
+    <div className={screenClasses}>
+      <Card className="grid gap-2">
+        <p className="text-orange-dark text-xs font-extrabold uppercase tracking-wider">ux-06</p>
+        <h1 className="text-text-h">Design System</h1>
+        <p className="text-text">色、余白、radius、shadow、主要コンポーネントの実物を確認するための開発用ページです。</p>
       </Card>
 
       <Card>
-        <h2>Brand Tokens</h2>
-        <div className="token-grid">
-          <span className="token-swatch token-swatch--orange">orange</span>
-          <span className="token-swatch token-swatch--dark">dark</span>
-          <span className="token-swatch token-swatch--mint">mint</span>
-          <span className="token-swatch token-swatch--surface">surface</span>
+        <h2 className="text-text-h mb-3">Brand Tokens</h2>
+        <div className="grid grid-cols-2 gap-2.5">
+          <span className="grid place-items-center min-h-[74px] rounded-md text-white font-black bg-orange">orange</span>
+          <span className="grid place-items-center min-h-[74px] rounded-md text-white font-black bg-text-h">dark</span>
+          <span className="grid place-items-center min-h-[74px] rounded-md text-white font-black bg-mint">mint</span>
+          <span className="grid place-items-center min-h-[74px] rounded-md text-text-h font-black border border-border bg-surface">
+            surface
+          </span>
         </div>
       </Card>
 
       <Card>
-        <h2>Buttons</h2>
-        <div className="button-sample-row">
+        <h2 className="text-text-h mb-3">Buttons</h2>
+        <div className="grid gap-2.5">
           <Button type="button">Primary</Button>
           <Button type="button" variant="secondary">
             Secondary
@@ -47,8 +52,8 @@ export function DevStylePage({ characters, eggs }: DevStylePageProps) {
       </Card>
 
       <Card>
-        <h2>Inputs</h2>
-        <div className="form-panel">
+        <h2 className="text-text-h mb-3">Inputs</h2>
+        <div className="grid gap-[18px]">
           <TextField label="TextField" placeholder="偏愛タイトル" />
           <TextField label="Textarea" placeholder="好きの細部を書く" rows={3} multiline />
           <TagInput tags={['ラジオ', '夜']} onChange={() => undefined} />
@@ -56,8 +61,8 @@ export function DevStylePage({ characters, eggs }: DevStylePageProps) {
       </Card>
 
       <Card>
-        <h2>Cards</h2>
-        <div className="style-card-grid">
+        <h2 className="text-text-h mb-3">Cards</h2>
+        <div className="grid gap-3.5">
           {egg ? <EggCard egg={egg} /> : <EggArt label="たまご" />}
           {character ? <CharacterCard character={character} egg={egg} featured /> : null}
           <EmptyState title="空状態" description="一覧が空のときは理由と次の行動を短く示します。" />
@@ -65,8 +70,8 @@ export function DevStylePage({ characters, eggs }: DevStylePageProps) {
       </Card>
 
       <Card>
-        <h2>Mascot</h2>
-        <div className="mascot-row">
+        <h2 className="text-text-h mb-3">Mascot</h2>
+        <div className="grid grid-cols-3 items-end gap-2.5 [&_.mascot]:scale-75 [&_.mascot]:origin-bottom">
           <Mascot egg={{ color: '#ffb6d9' }} size="small" />
           <Mascot egg={{ color: '#ffe1a8' }} size="small" />
           <Mascot egg={{ color: '#d9c8ff' }} size="small" />
@@ -74,7 +79,7 @@ export function DevStylePage({ characters, eggs }: DevStylePageProps) {
       </Card>
 
       <Modal isOpen={false} onClose={() => undefined} title="Modal sample">
-        <p>このコンポーネントは確認用に定義済みです。</p>
+        <p className="text-text">このコンポーネントは確認用に定義済みです。</p>
       </Modal>
     </div>
   )

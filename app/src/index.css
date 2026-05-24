@@ -1,63 +1,282 @@
 @import "tailwindcss";
 
-:root {
-  --orange: #ff9b37;
-  --orange-dark: #e77300;
-  --mint: #4edbfb;
-  --text: #494949;
-  --text-h: #1f1f1f;
-  --surface: #fffdfb;
-  --page-bg: #f3f3f3;
-  --border: #f1e7dc;
+@theme {
+  --color-orange: #ff9b37;
+  --color-orange-dark: #e77300;
+  --color-mint: #4edbfb;
+  --color-text: #494949;
+  --color-text-h: #1f1f1f;
+  --color-surface: #fffdfb;
+  --color-page-bg: #f3f3f3;
+  --color-border: #f1e7dc;
+  --color-cream: #fff8f0;
+  --color-cream-light: #fffaf4;
+  --color-cream-tab: #fff1df;
+  --color-tag-bg: #eafffb;
+  --color-tag-text: #1598a5;
+
   --radius-sm: 14px;
   --radius-md: 18px;
   --radius-lg: 28px;
-  --shadow: 0 18px 44px rgba(73, 73, 73, 0.1);
+
+  --shadow-default: 0 18px 44px rgba(73, 73, 73, 0.1);
   --shadow-soft: 0 14px 36px rgba(73, 73, 73, 0.08);
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --sans: 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', 'Yu Gothic', 'Segoe UI', sans-serif;
 
-  font: 16px/1.55 var(--sans);
-  color: var(--text);
-  background: var(--page-bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --font-sans: 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', 'Yu Gothic', 'Segoe UI', sans-serif;
 }
 
-* {
-  box-sizing: border-box;
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    font: 16px/1.55 var(--font-sans);
+    color: var(--color-text);
+    background: var(--color-page-bg);
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  h1,
+  h2,
+  h3,
+  p {
+    margin: 0;
+  }
+
+  #root {
+    min-height: 100svh;
+  }
 }
 
-body {
-  margin: 0;
-}
+/* Decorative components with pseudo-elements and CSS variables */
+@layer components {
+  .egg-art {
+    --egg-color: var(--color-orange);
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 74px;
+    height: 92px;
+    overflow: hidden;
+    border-radius: 52% 52% 46% 46% / 62% 62% 38% 38%;
+    background:
+      radial-gradient(circle at 35% 28%, rgba(255, 255, 255, 0.9), transparent 17%),
+      linear-gradient(145deg, #ffe0a8, var(--egg-color));
+    color: white;
+    font-size: 11px;
+    text-align: center;
+  }
 
-button,
-input,
-textarea,
-select {
-  font: inherit;
-}
+  .egg-art__shine,
+  .egg-art__zigzag {
+    position: absolute;
+    inset-inline: -8px;
+    height: 16px;
+    background: var(--color-mint);
+    opacity: 0.9;
+  }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
+  .egg-art__shine {
+    top: 34px;
+    transform: rotate(-8deg);
+  }
 
-h1,
-h2,
-h3,
-p {
-  margin: 0;
-}
+  .egg-art__zigzag {
+    top: 58px;
+    background: #f8c7dc;
+    transform: rotate(7deg);
+  }
 
-#root {
-  min-height: 100svh;
+  .egg-art strong {
+    position: relative;
+    z-index: 1;
+    padding-top: 8px;
+    text-shadow: 0 1px 5px rgba(73, 73, 73, 0.28);
+  }
+
+  .mascot {
+    --mascot-color: #ffb6d9;
+    position: relative;
+    width: 210px;
+    height: 230px;
+    margin: 16px auto 22px;
+  }
+
+  .mascot--small {
+    width: 128px;
+    height: 140px;
+  }
+
+  .mascot-body {
+    position: absolute;
+    inset: 32px 22px 0;
+    border-radius: 48% 48% 42% 42%;
+    background:
+      radial-gradient(circle at 35% 22%, rgba(255, 255, 255, 0.9), transparent 24%),
+      var(--mascot-color, #ffb6d9);
+    box-shadow: 0 18px 35px rgba(255, 182, 217, 0.36);
+  }
+
+  .mascot-ear {
+    position: absolute;
+    top: 18px;
+    width: 58px;
+    height: 72px;
+    border-radius: 16px 70px 16px 70px;
+    background: var(--mascot-color, #ffb6d9);
+  }
+
+  .mascot-ear--left {
+    left: 38px;
+    transform: rotate(-24deg);
+  }
+
+  .mascot-ear--right {
+    right: 38px;
+    transform: scaleX(-1) rotate(-24deg);
+  }
+
+  .mascot-eye {
+    position: absolute;
+    top: 78px;
+    width: 14px;
+    height: 20px;
+    border-radius: 999px;
+    background: #d45383;
+  }
+
+  .mascot-eye--left {
+    left: 58px;
+  }
+
+  .mascot-eye--right {
+    right: 58px;
+  }
+
+  .mascot-mouth {
+    position: absolute;
+    top: 108px;
+    left: 50%;
+    width: 12px;
+    height: 7px;
+    border-bottom: 2px solid #d45383;
+    border-radius: 999px;
+    transform: translateX(-50%);
+  }
+
+  .mascot-tail {
+    position: absolute;
+    right: -4px;
+    bottom: 24px;
+    width: 72px;
+    height: 110px;
+    border-radius: 70% 30% 70% 30%;
+    background: var(--mascot-color, #ffb6d9);
+    transform: rotate(24deg);
+    opacity: 0.82;
+  }
+
+  .qr-mock {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 170px;
+    height: 170px;
+    border: 12px solid var(--color-orange);
+    border-radius: 26px;
+    background:
+      linear-gradient(90deg, var(--color-orange) 12px, transparent 12px) 22px 22px / 44px 44px,
+      linear-gradient(var(--color-orange) 12px, transparent 12px) 22px 22px / 44px 44px,
+      var(--color-cream);
+  }
+
+  .qr-mock--share {
+    width: 118px;
+    height: 118px;
+    border-width: 9px;
+    border-radius: 22px;
+    background:
+      linear-gradient(90deg, var(--color-orange) 9px, transparent 9px) 16px 16px / 32px 32px,
+      linear-gradient(var(--color-orange) 9px, transparent 9px) 16px 16px / 32px 32px,
+      white;
+  }
+
+  .qr-mock--share span {
+    width: 25px;
+    height: 25px;
+    border-width: 6px;
+    border-radius: 7px;
+  }
+
+  .qr-mock--share span:nth-child(1) {
+    top: 14px;
+    left: 14px;
+  }
+
+  .qr-mock--share span:nth-child(2) {
+    top: 14px;
+    right: 14px;
+  }
+
+  .qr-mock--share span:nth-child(3) {
+    bottom: 14px;
+    left: 14px;
+  }
+
+  .qr-mock span {
+    position: absolute;
+    width: 34px;
+    height: 34px;
+    border: 8px solid var(--color-orange-dark);
+    border-radius: 8px;
+    background: white;
+  }
+
+  .qr-mock span:nth-child(1) {
+    top: 20px;
+    left: 20px;
+  }
+
+  .qr-mock span:nth-child(2) {
+    top: 20px;
+    right: 20px;
+  }
+
+  .qr-mock span:nth-child(3) {
+    bottom: 20px;
+    left: 20px;
+  }
+
+  .qr-mock strong {
+    color: var(--color-orange-dark);
+    background: white;
+    padding: 4px 8px;
+    border-radius: 10px;
+  }
+
+  .camera-frame i {
+    position: absolute;
+    inset: 42px;
+    border: 4px solid rgba(255, 255, 255, 0.86);
+    border-radius: 22px;
+    box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.18);
+    pointer-events: none;
+  }
 }

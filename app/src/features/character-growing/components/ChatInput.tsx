@@ -22,7 +22,7 @@ export function ChatInput({ onSend }: Props) {
       onSubmit={handleSubmit}
     >
       <input
-        className="flex-1 border border-[#f1e7dc] focus:border-[#ff9b37] rounded-full px-4 py-2.5 text-sm text-[#1f1f1f] bg-white outline-none shadow-sm"
+        className="flex-1 border border-border focus:border-orange rounded-full px-4 py-2.5 text-sm text-text-h bg-white outline-none shadow-sm"
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder="メッセージを入力…"
@@ -33,8 +33,8 @@ export function ChatInput({ onSend }: Props) {
         aria-label="送信"
         className={`w-11 h-11 shrink-0 rounded-full border-none grid place-items-center text-xl text-white transition-colors ${
           canSend
-            ? 'bg-[#ff9b37] shadow-[0_6px_14px_rgba(255,155,55,0.32)] cursor-pointer'
-            : 'bg-[#f1e7dc] cursor-default'
+            ? 'bg-orange shadow-[0_6px_14px_rgba(255,155,55,0.32)] cursor-pointer'
+            : 'bg-border cursor-default'
         }`}
       >
         ↑

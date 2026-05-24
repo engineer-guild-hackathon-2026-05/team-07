@@ -7,6 +7,9 @@ import { Card, EmptyState, Button } from '../features/components/ui'
 import { formatShortDate, getEggForCharacter } from '../lib/viewHelpers'
 import type { Character, Egg, Exchange, Passion, User } from '../types/models'
 
+const screenClasses =
+  'h-full overflow-y-auto box-border px-[22px] pt-7 pb-28 flex flex-col gap-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
+
 type HomePageProps = {
   characters: Character[]
   eggs: Egg[]
@@ -26,19 +29,23 @@ export function HomePage({ characters, eggs, exchanges, onReset, passions, user 
   }, [eggs, exchanges])
 
   return (
-    <div className="screen home-screen">
+    <div className={screenClasses}>
       <HeaderBar
         title="偏愛の卵"
         subtitle={`${user.name}さんのホーム`}
         action={
-          <button type="button" className="text-reset" onClick={onReset}>
+          <button
+            type="button"
+            className="pt-2.5 bg-transparent border-none text-[#b6b6b6] text-xs cursor-pointer font-[inherit]"
+            onClick={onReset}
+          >
             reset
           </button>
         }
       />
 
       {featuredCharacters.length > 0 ? (
-        <section className="home-hero-grid" aria-label="代表キャラクター">
+        <section className="grid gap-3.5" aria-label="代表キャラクター">
           {featuredCharacters.map((character) => (
             <CharacterCard
               featured
@@ -58,7 +65,7 @@ export function HomePage({ characters, eggs, exchanges, onReset, passions, user 
         />
       )}
 
-      <section className="quick-actions">
+      <section className="grid grid-cols-[1fr_0.8fr] gap-3 my-[18px]">
         <Button type="button" onClick={() => navigate('/passions/new')}>
           新しい偏愛を登録する
         </Button>
@@ -68,12 +75,15 @@ export function HomePage({ characters, eggs, exchanges, onReset, passions, user 
       </section>
 
       <Card>
-        <div className="section-title-row">
-          <h2>最近交換した卵</h2>
-          <span>{recentEggs.length}個</span>
+        <div className="flex justify-between items-center gap-3 mb-3">
+          <h2 className="text-text-h">最近交換した卵</h2>
+          <span className="text-orange-dark text-xs font-extrabold">{recentEggs.length}個</span>
         </div>
         {recentEggs.length > 0 ? (
-          <div className="horizontal-scroll" aria-label="最近交換した卵">
+          <div
+            className="grid grid-flow-col auto-cols-[minmax(230px,84%)] gap-3 overflow-x-auto pb-1 snap-x snap-mandatory [&>*]:snap-start"
+            aria-label="最近交換した卵"
+          >
             {recentEggs.map((egg) => (
               <EggCard key={egg.id} egg={egg} />
             ))}
@@ -84,12 +94,12 @@ export function HomePage({ characters, eggs, exchanges, onReset, passions, user 
       </Card>
 
       <Card>
-        <div className="section-title-row">
-          <h2>育成中キャラ</h2>
-          <span>{characters.length}体</span>
+        <div className="flex justify-between items-center gap-3 mb-3">
+          <h2 className="text-text-h">育成中キャラ</h2>
+          <span className="text-orange-dark text-xs font-extrabold">{characters.length}体</span>
         </div>
         {characters.length > 0 ? (
-          <div className="character-list">
+          <div className="grid gap-3.5">
             {characters.map((character) => (
               <CharacterCard
                 key={character.id}
@@ -105,18 +115,18 @@ export function HomePage({ characters, eggs, exchanges, onReset, passions, user 
       </Card>
 
       <Card>
-        <div className="section-title-row">
-          <h2>最近の偏愛</h2>
-          <span>{passions.length}件</span>
+        <div className="flex justify-between items-center gap-3 mb-3">
+          <h2 className="text-text-h">最近の偏愛</h2>
+          <span className="text-orange-dark text-xs font-extrabold">{passions.length}件</span>
         </div>
-        <div className="passion-stack">
+        <div className="grid gap-3">
           {passions.slice(0, 3).map((passion) => (
-            <article className="passion-row" key={passion.id}>
+            <article className="grid grid-cols-[1fr_auto] gap-3 items-start p-3.5 rounded-md bg-cream" key={passion.id}>
               <div>
-                <strong>{passion.title}</strong>
-                <p>{passion.description}</p>
+                <strong className="block mb-1 text-text-h">{passion.title}</strong>
+                <p className="text-text">{passion.description}</p>
               </div>
-              <span>{formatShortDate(passion.createdAt)}</span>
+              <span className="text-orange-dark text-xs font-extrabold">{formatShortDate(passion.createdAt)}</span>
             </article>
           ))}
         </div>

@@ -7,7 +7,10 @@ type CardProps = HTMLAttributes<HTMLElement> & {
 
 export function Card({ as: Tag = 'section', children, className = '', ...props }: CardProps) {
   return (
-    <Tag className={`panel ${className}`.trim()} {...props}>
+    <Tag
+      className={`border border-orange/12 rounded-lg bg-white shadow-soft p-5 ${className}`.trim()}
+      {...props}
+    >
       {children}
     </Tag>
   )
