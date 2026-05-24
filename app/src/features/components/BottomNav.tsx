@@ -16,24 +16,30 @@ export function BottomNav({ firstCharacterId }: BottomNavProps) {
   const location = useLocation()
 
   return (
-    <nav className="bottom-nav" aria-label="メインナビゲーション">
-      {navItems.map((item) => {
-        const path = item.path === '/characters' && firstCharacterId ? `/characters/${firstCharacterId}` : item.path
-        const isActive =
-          item.path === '/' ? location.pathname === '/' : location.pathname.startsWith(item.match ?? item.path)
+    <nav className="app-nav" aria-label="メインナビゲーション">
+      <div className="app-nav__brand">
+        <p className="eyebrow">HenAi Egg</p>
+        <strong>偏愛の卵</strong>
+      </div>
 
-        return (
-          <Link
-            key={item.path}
-            to={path}
-            className={isActive ? 'is-active' : ''}
-            aria-label={item.label}
-          >
-            <span>{item.icon}</span>
-            <small>{item.label}</small>
-          </Link>
-        )
-      })}
+      <div className="app-nav__links">
+        {navItems.map((item) => {
+          const path = item.path === '/characters' && firstCharacterId ? `/characters/${firstCharacterId}` : item.path
+          const isActive =
+            item.path === '/' ? location.pathname === '/' : location.pathname.startsWith(item.match ?? item.path)
+
+          return (
+            <Link key={item.path} to={path} className={isActive ? 'is-active' : ''} aria-label={item.label}>
+              <span className="app-nav__icon">{item.icon}</span>
+              <span className="app-nav__label">{item.label}</span>
+            </Link>
+          )
+        })}
+      </div>
+
+      <Link to="/dev/style" className="app-nav__footer">
+        Design System
+      </Link>
     </nav>
   )
 }

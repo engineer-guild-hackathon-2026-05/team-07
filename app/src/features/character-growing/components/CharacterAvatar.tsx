@@ -18,7 +18,7 @@ export function CharacterAvatar({ character, egg }: Props) {
   const affinity = Math.min(100, Math.max(0, character.affinityScore))
 
   return (
-    <div className="flex flex-col items-center gap-2.5 px-5 pt-5 pb-3 border-b border-[#ff9b37]/20 shrink-0">
+    <div className="character-chat-header flex flex-col items-center gap-2.5 px-5 pt-5 pb-3 border-b border-[#ff9b37]/20 shrink-0">
       {/* TODO: Replace hero.png with character-specific generated image from Firebase Storage */}
       <div
         className="w-20 h-20 rounded-full overflow-hidden shadow-[var(--shadow)]"

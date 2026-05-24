@@ -147,31 +147,33 @@ function CharacterChat({ character, egg, userId }: { character: Character; egg: 
   )
 
   return (
-    <div className="screen !p-0 flex flex-col">
+    <div className="screen character-chat-screen !p-0 flex flex-col">
       <CharacterAvatar character={character} egg={egg} />
 
-      <div className="flex-1 overflow-y-auto flex flex-col gap-2.5 px-4 py-3.5" style={{ paddingBottom: '176px' }}>
-        {chat.messages.length === 0 ? (
-          <p className="text-center text-sm text-[#494949]/60 mt-6">はじめて話しかけてみよう</p>
-        ) : null}
-        {chat.messages.map((message) => (
-          <ChatBubble key={message.id} message={message} />
-        ))}
-        <div ref={bottomRef} />
-      </div>
-
-      <section className="px-4 pb-[184px]">
-        <div className="panel">
-          <h2>解放済みトピック</h2>
-          <div className="tag-list">
-            {character.unlockedTopics.map((topic) => (
-              <span className="tag-chip tag-chip--static" key={topic}>
-                {topic}
-              </span>
-            ))}
-          </div>
+      <div className="character-chat-main">
+        <div className="character-chat-messages">
+          {chat.messages.length === 0 ? (
+            <p className="text-center text-sm text-[#494949]/60 mt-6">はじめて話しかけてみよう</p>
+          ) : null}
+          {chat.messages.map((message) => (
+            <ChatBubble key={message.id} message={message} />
+          ))}
+          <div ref={bottomRef} />
         </div>
-      </section>
+
+        <aside className="character-chat-sidebar">
+          <div className="panel">
+            <h2>解放済みトピック</h2>
+            <div className="tag-list">
+              {character.unlockedTopics.map((topic) => (
+                <span className="tag-chip tag-chip--static" key={topic}>
+                  {topic}
+                </span>
+              ))}
+            </div>
+          </div>
+        </aside>
+      </div>
 
       <ChatInput onSend={sendMessage} />
     </div>

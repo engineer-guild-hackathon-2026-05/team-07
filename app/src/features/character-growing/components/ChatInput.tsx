@@ -17,10 +17,7 @@ export function ChatInput({ onSend }: Props) {
   const canSend = value.trim().length > 0
 
   return (
-    <form
-      className="absolute left-0 right-0 bottom-[104px] flex items-center gap-2 px-4 z-10"
-      onSubmit={handleSubmit}
-    >
+    <form className="chat-input-bar" onSubmit={handleSubmit}>
       <input
         className="flex-1 border border-[#f1e7dc] focus:border-[#ff9b37] rounded-full px-4 py-2.5 text-sm text-[#1f1f1f] bg-white outline-none shadow-sm"
         value={value}
