@@ -117,7 +117,7 @@ function AppContent() {
             path="/passions/new"
             element={
               <RequireAuth user={user}>
-                <AddPassionPage onCreated={handleCreated} userId={user!.uid} />
+                <AddPassionPage onCreated={handleCreated} userId={user?.uid ?? ''} />
               </RequireAuth>
             }
           />
@@ -141,7 +141,7 @@ function AppContent() {
             path="/characters"
             element={
               <RequireAuth user={user}>
-                <CharacterDetailPage eggs={eggs} characters={characters} />
+                <CharacterDetailPage eggs={eggs} characters={characters} userId={user?.uid ?? ''} />
               </RequireAuth>
             }
           />
@@ -149,7 +149,7 @@ function AppContent() {
             path="/characters/:characterId"
             element={
               <RequireAuth user={user}>
-                <CharacterDetailPage eggs={eggs} characters={characters} />
+                <CharacterDetailPage eggs={eggs} characters={characters} userId={user?.uid ?? ''} />
               </RequireAuth>
             }
           />
