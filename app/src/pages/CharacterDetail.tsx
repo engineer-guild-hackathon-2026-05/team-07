@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
+import { EmptyState } from '../components/ui'
 import { CharacterAvatar, ChatBubble, ChatInput } from '../features/character-growing'
-import { EmptyState } from '../features/components/ui'
 import { getEggForCharacter } from '../lib/viewHelpers'
 import type { Character, Chat, ChatMessage, Egg } from '../types/models'
 
@@ -92,12 +92,12 @@ export function CharacterDetailPage({ characters, eggs, userId = FALLBACK_USER_I
     )
   }
 
-  return <CharacterChat character={character} egg={egg} userId={userId} />
+  return <CharacterChat key={`${character.id}-${userId}`} character={character} egg={egg} userId={userId} />
 }
 
 function CharacterChat({ character, egg, userId }: { character: Character; egg: Egg; userId: string }) {
   const bottomRef = useRef<HTMLDivElement>(null)
-  const initialChat = useMemo(
+  const [chat, setChat] = useState<Chat>(
     () =>
       readChat(character.id, userId) ?? {
         id: createId('chat'),
@@ -106,13 +106,7 @@ function CharacterChat({ character, egg, userId }: { character: Character; egg: 
         messages: [],
         updatedAt: new Date().toISOString(),
       },
-    [character.id, userId],
   )
-  const [chat, setChat] = useState<Chat>(initialChat)
-
-  useEffect(() => {
-    setChat(initialChat)
-  }, [initialChat])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })

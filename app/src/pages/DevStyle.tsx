@@ -2,7 +2,7 @@ import { CharacterCard } from '../features/components/CharacterCard'
 import { EggCard } from '../features/components/EggCard'
 import { EggArt } from '../features/components/EggArt'
 import { Mascot } from '../features/components/Mascot'
-import { Button, Card, EmptyState, Modal, TagInput, TextField } from '../features/components/ui'
+import { Button, Card, EmptyState, Modal, TagInput, Textarea, TextField } from '../components/ui'
 import { getEggForCharacter } from '../lib/viewHelpers'
 import type { Character, Egg } from '../types/models'
 
@@ -26,9 +26,9 @@ export function DevStylePage({ characters, eggs }: DevStylePageProps) {
       <Card>
         <h2>Brand Tokens</h2>
         <div className="token-grid">
-          <span className="token-swatch token-swatch--orange">orange</span>
-          <span className="token-swatch token-swatch--dark">dark</span>
-          <span className="token-swatch token-swatch--mint">mint</span>
+          <span className="token-swatch token-swatch--primary">primary</span>
+          <span className="token-swatch token-swatch--text">text</span>
+          <span className="token-swatch token-swatch--accent">accent</span>
           <span className="token-swatch token-swatch--surface">surface</span>
         </div>
       </Card>
@@ -50,7 +50,7 @@ export function DevStylePage({ characters, eggs }: DevStylePageProps) {
         <h2>Inputs</h2>
         <div className="form-panel">
           <TextField label="TextField" placeholder="偏愛タイトル" />
-          <TextField label="Textarea" placeholder="好きの細部を書く" rows={3} multiline />
+          <Textarea label="Textarea" placeholder="好きの細部を書く" rows={3} />
           <TagInput tags={['ラジオ', '夜']} onChange={() => undefined} />
         </div>
       </Card>

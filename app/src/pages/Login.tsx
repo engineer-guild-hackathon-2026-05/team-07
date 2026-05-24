@@ -1,6 +1,6 @@
 import { Navigate } from 'react-router-dom'
+import { Button } from '../components/ui'
 import { Mascot } from '../features/components/Mascot'
-import { Button } from '../features/components/ui'
 import type { User } from '../types/models'
 
 type LoginPageProps = {
