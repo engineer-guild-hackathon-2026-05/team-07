@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import type { Character, Chat, ChatMessage, Egg } from '../types/models'
 import { CharacterAvatar, ChatBubble, ChatInput } from '../features/character-growing'
 import { Modal } from './ui'
@@ -81,7 +81,7 @@ function buildMockReply(character: Character, userText: string): string {
 // ---------------------------------------------------------------------------
 
 export function CharacterChat({ character, egg, userId }: CharacterChatProps) {
-  const bottomRef = useRef<HTMLDivElement>(null)
+  const historyBottomRef = useRef<HTMLDivElement>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
 
@@ -95,11 +95,6 @@ export function CharacterChat({ character, egg, userId }: CharacterChatProps) {
         updatedAt: new Date().toISOString(),
       },
   )
-
-  // Auto-scroll to newest message
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [chat.messages.length, isLoading])
 
   const sendMessage = useCallback(
     async (content: string) => {
@@ -155,41 +150,21 @@ export function CharacterChat({ character, egg, userId }: CharacterChatProps) {
         <span aria-hidden>🕐</span> 履歴
       </button>
 
+      {/* Top spacer — pushes avatar toward center */}
+      <div className="flex-1" />
+
       {/* Character avatar (name, affinity, image, status button) */}
       <CharacterAvatar character={character} egg={egg} />
 
-      {/* Chat messages */}
-      <div
-        className="flex-1 overflow-y-auto flex flex-col gap-2.5 px-4 py-3.5"
-        style={{ paddingBottom: '176px' }}
-      >
-        {chat.messages.length === 0 && !isLoading && (
-          <p className="text-center text-sm text-[#494949]/50 mt-6">はじめて話しかけてみよう</p>
-        )}
-
-        {chat.messages.map((msg) => (
-          <ChatBubble key={msg.id} message={msg} />
-        ))}
-
-        {/* Loading indicator */}
-        {isLoading && <LoadingBubble />}
-
-        <div ref={bottomRef} />
-      </div>
-
-      {/* Unlocked topics */}
-      <section className="px-4" style={{ paddingBottom: '184px' }}>
-        <div className="panel">
-          <h2>解放済みトピック</h2>
-          <div className="tag-list mt-2">
-            {character.unlockedTopics.map((topic) => (
-              <span className="tag-chip tag-chip--static" key={topic}>
-                {topic}
-              </span>
-            ))}
-          </div>
+      {/* Loading indicator (visible during AI response) */}
+      {isLoading && (
+        <div className="px-4 pt-2">
+          <LoadingBubble />
         </div>
-      </section>
+      )}
+
+      {/* Spacer so input doesn't overlap avatar */}
+      <div className="flex-1" />
 
       {/* Chat input */}
       <ChatInput onSend={sendMessage} disabled={isLoading} />
@@ -200,12 +175,13 @@ export function CharacterChat({ character, egg, userId }: CharacterChatProps) {
         onClose={() => setShowHistory(false)}
         title="会話履歴"
       >
-        <div className="flex flex-col gap-2.5 max-h-[50vh] overflow-y-auto pt-2">
+        <div className="flex flex-col gap-2.5 min-h-[300px] max-h-[50vh] overflow-y-auto pt-2">
           {chat.messages.length === 0 ? (
             <p className="text-sm text-center text-[#494949]/50 py-4">まだメッセージはありません</p>
           ) : (
             chat.messages.map((msg) => <ChatBubble key={msg.id} message={msg} />)
           )}
+          <div ref={historyBottomRef} />
         </div>
       </Modal>
     </div>

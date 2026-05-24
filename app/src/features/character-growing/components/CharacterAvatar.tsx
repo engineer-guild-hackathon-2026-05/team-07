@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { Character, Egg } from '../../../types/models'
 import { Modal } from '../../../components/ui'
-import charBlueImg from '../../../assets/char_blue.png'
+import charBlueImg from '../../../assets/char_blue_transparent.png'
 
 interface Props {
   character: Character
@@ -15,18 +15,18 @@ export function CharacterAvatar({ character, egg }: Props) {
 
   return (
     <>
-      <div className="flex flex-col items-center gap-3 px-5 pt-5 pb-4 border-b border-[#f1e7dc] shrink-0">
-        {/* Name + affinity — above the image */}
-        <div className="flex items-center justify-between w-full px-2">
-          <span className="text-lg font-black text-[#1f1f1f]">{character.name}</span>
+      <div className="flex flex-col items-center gap-2 px-5 pt-6 pb-3 shrink-0">
+        {/* Name + affinity badge — centered, directly above the image */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-bold text-[#494949]/50">{character.name}</span>
           <AffinityBadge value={character.affinityScore} />
         </div>
 
-        {/* Character image */}
+        {/* Character image — large and centered */}
         <img
           src={charBlueImg}
           alt={character.name}
-          className="h-36 w-auto object-contain drop-shadow-md"
+          className="h-72 w-auto object-contain"
         />
 
         {/* Status button */}
@@ -99,11 +99,11 @@ export function CharacterAvatar({ character, egg }: Props) {
 
 function AffinityBadge({ value }: { value: number }) {
   return (
-    <div className="relative flex items-center justify-center w-9 h-8" aria-label={`親密度 ${value}`}>
+    <div className="relative flex items-center justify-center w-8 h-7" aria-label={`親密度 ${value}`}>
       <svg viewBox="0 0 40 36" className="w-full h-full" fill="#fce7f3" aria-hidden="true">
         <path d="M20 33C20 33 3 22 3 12C3 6.5 7.5 2 13 2C16 2 18.5 4 20 6C21.5 4 24 2 27 2C32.5 2 37 6.5 37 12C37 22 20 33 20 33Z" />
       </svg>
-      <span className="absolute text-[10px] font-black text-pink-400 leading-none" style={{ marginTop: 2 }}>
+      <span className="absolute text-[10px] font-black text-pink-300 leading-none" style={{ marginTop: 2 }}>
         {value}
       </span>
     </div>
