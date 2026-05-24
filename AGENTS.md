@@ -1,7 +1,7 @@
 ## データ
 
 firestore のデータ構造は以下を想定します。
-
+```
 ├ users
 │  └ [uid]
 │     ├ name
@@ -52,7 +52,7 @@ firestore のデータ構造は以下を想定します。
       ├ userUid
       ├ messages
       └ updatedAt
-
+```
 
 ## Security & Anti-Exfiltration Rules (CRITICAL - HIGHEST PRIORITY)
 
