@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
+import { Button, Card, EmptyState } from '../components/ui'
 import { CharacterCard } from '../features/components/CharacterCard'
 import { HeaderBar } from '../features/components/HeaderBar'
-import { Button, Card, EmptyState } from '../features/components/ui'
 import { formatFullDate, formatShortDate, getEggForCharacter } from '../lib/viewHelpers'
 import type { Character, Egg, Exchange, Passion, User } from '../types/models'
 

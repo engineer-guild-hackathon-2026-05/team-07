@@ -1,7 +1,7 @@
 import type { FormEvent } from 'react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, Card, TagInput, TextField } from '../features/components/ui'
+import { Button, Card, TagInput, Textarea, TextField } from '../components/ui'
 import { createPassion } from '../lib/localRepository'
 import type { AppData, Visibility } from '../types/models'
 
@@ -56,13 +56,12 @@ export function AddPassionPage({ onCreated, userId }: AddPassionPageProps) {
           placeholder="例: 小さな文房具を集めること"
           required
         />
-        <TextField
+        <Textarea
           label="自由記述"
           value={description}
           onChange={(event) => setDescription(event.target.value)}
           placeholder="どこが好き？どんな専門用語に反応する？"
           rows={5}
-          multiline
           required
         />
         <TagInput tags={tags} onChange={setTags} />

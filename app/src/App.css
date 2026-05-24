@@ -1107,16 +1107,16 @@
   font-weight: 900;
 }
 
-.token-swatch--orange {
-  background: var(--orange);
+.token-swatch--primary {
+  background: var(--primary);
 }
 
-.token-swatch--dark {
-  background: var(--text-h);
+.token-swatch--text {
+  background: var(--text-heading);
 }
 
-.token-swatch--mint {
-  background: var(--mint);
+.token-swatch--accent {
+  background: var(--accent);
 }
 
 .token-swatch--surface {

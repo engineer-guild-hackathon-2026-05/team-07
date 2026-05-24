@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import type { Character, Chat, ChatMessage, Egg } from '../../../types/models'
 import { loadAppData, getCurrentUser, CURRENT_USER_ID } from '../../../lib/localRepository'
 
@@ -64,59 +64,63 @@ function buildMockReply(character: Character, userText: string): string {
 // Hook
 // ---------------------------------------------------------------------------
 
+function loadCharacterDetailState(characterId: string): CharacterDetailState {
+  // TODO: Replace with Firestore real-time listeners when DB is ready:
+  //   const unsubChar = onSnapshot(doc(db, COLLECTIONS.CHARACTERS, characterId), snap => { ... })
+  //   const unsubChat = onSnapshot(
+  //     query(collection(db, COLLECTIONS.CHATS),
+  //       where('characterId', '==', characterId),
+  //       where('userUid', '==', auth.currentUser?.uid),
+  //     ),
+  //     snap => { ... },
+  //   )
+  //   return () => { unsubChar(); unsubChat() }
+  const data = loadAppData()
+  const user = getCurrentUser(data)
+
+  const character = data.characters.find((c) => c.id === characterId)
+  if (!character) {
+    return { status: 'not-found' }
+  }
+
+  // Access control: ownership lives on the Egg, not the Character.
+  // TODO: Also enforce via Firestore Security Rules:
+  //   allow read: if request.auth.uid == get(/databases/$(database)/documents/eggs/$(resource.data.eggId)).data.currentOwnerUid
+  const egg = data.eggs.find((e) => e.id === character.eggId)
+  if (!egg || egg.currentOwnerUid !== user.uid) {
+    return { status: 'forbidden' }
+  }
+
+  const existing = data.chats.find((c) => c.characterId === characterId && c.userUid === CURRENT_USER_ID)
+  const chat: Chat = existing ?? {
+    id: createId('chat'),
+    characterId,
+    userUid: CURRENT_USER_ID,
+    messages: [],
+    updatedAt: new Date().toISOString(),
+  }
+
+  return { status: 'ok', character, egg, chat }
+}
+
 export function useCharacterDetail(characterId: string) {
-  const [state, setState] = useState<CharacterDetailState>({ status: 'loading' })
-
-  useEffect(() => {
-    // TODO: Replace with Firestore real-time listeners when DB is ready:
-    //   const unsubChar = onSnapshot(doc(db, COLLECTIONS.CHARACTERS, characterId), snap => { ... })
-    //   const unsubChat = onSnapshot(
-    //     query(collection(db, COLLECTIONS.CHATS),
-    //       where('characterId', '==', characterId),
-    //       where('userUid', '==', auth.currentUser?.uid),
-    //     ),
-    //     snap => { ... },
-    //   )
-    //   return () => { unsubChar(); unsubChat() }
-    const data = loadAppData()
-    const user = getCurrentUser(data)
-
-    const character = data.characters.find((c) => c.id === characterId)
-    if (!character) {
-      setState({ status: 'not-found' })
-      return
+  const [chatOverrides, setChatOverrides] = useState<Record<string, Chat>>({})
+  const baseState = useMemo(() => loadCharacterDetailState(characterId), [characterId])
+  const state = useMemo<CharacterDetailState>(() => {
+    if (baseState.status !== 'ok') {
+      return baseState
     }
 
-    // Access control: ownership lives on the Egg, not the Character.
-    // TODO: Also enforce via Firestore Security Rules:
-    //   allow read: if request.auth.uid == get(/databases/$(database)/documents/eggs/$(resource.data.eggId)).data.currentOwnerUid
-    const egg = data.eggs.find((e) => e.id === character.eggId)
-    if (!egg || egg.currentOwnerUid !== user.uid) {
-      setState({ status: 'forbidden' })
-      return
-    }
-
-    const existing = data.chats.find(
-      (c) => c.characterId === characterId && c.userUid === CURRENT_USER_ID,
-    )
-    const chat: Chat = existing ?? {
-      id: createId('chat'),
-      characterId,
-      userUid: CURRENT_USER_ID,
-      messages: [],
-      updatedAt: new Date().toISOString(),
-    }
-
-    setState({ status: 'ok', character, egg, chat })
-  }, [characterId])
+    return { ...baseState, chat: chatOverrides[characterId] ?? baseState.chat }
+  }, [baseState, characterId, chatOverrides])
 
   const sendMessage = useCallback((content: string) => {
     const trimmed = content.trim()
     if (!trimmed) return
 
-    setState((prev) => {
-      if (prev.status !== 'ok') return prev
+    if (state.status !== 'ok') return
 
+    setChatOverrides((prev) => {
       const now = new Date().toISOString()
 
       const userMsg: ChatMessage = {
@@ -129,22 +133,22 @@ export function useCharacterDetail(characterId: string) {
       const charMsg: ChatMessage = {
         id: createId('msg'),
         role: 'character',
-        content: buildMockReply(prev.character, trimmed),
+        content: buildMockReply(state.character, trimmed),
         createdAt: new Date(Date.now() + 400).toISOString(),
       }
 
       const updatedChat: Chat = {
-        ...prev.chat,
-        messages: [...prev.chat.messages, userMsg, charMsg],
+        ...state.chat,
+        messages: [...state.chat.messages, userMsg, charMsg],
         updatedAt: now,
       }
 
       // Persist so messages survive page reload
       persistChat(updatedChat)
 
-      return { ...prev, chat: updatedChat }
+      return { ...prev, [characterId]: updatedChat }
     })
-  }, [])
+  }, [characterId, state])
 
   return { state, sendMessage }
 }
