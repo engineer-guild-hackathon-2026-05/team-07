@@ -1,6 +1,10 @@
+import { useEffect, useRef, useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import loginHeroGif from '../assets/login-hero.gif'
 import type { User } from '../types/models'
+
+const LOGIN_BG_VIDEO = '/mp_.mp4'
+
+const FEATURES = ['偏愛を込める', 'キャラを育てる', '卵を交わす'] as const
 
 type LoginPageProps = {
   authError: string
@@ -11,30 +15,84 @@ type LoginPageProps = {
   user: User | null
 }
 
-function Sparkle({ size = 14, className = '' }: { size?: number; className?: string }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden>
-      <path
-        d="M12 2 L13.5 10.5 L22 12 L13.5 13.5 L12 22 L10.5 13.5 L2 12 L10.5 10.5 Z"
-        fill="currentColor"
-        opacity="0.75"
-      />
-    </svg>
-  )
+type LoginVideoProps = {
+  variant: 'hero' | 'ambient'
 }
 
-function StarBadge() {
+function LoginBackgroundVideo({ variant }: LoginVideoProps) {
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const [visible, setVisible] = useState(false)
+  const [failed, setFailed] = useState(false)
+  const [reduceMotion, setReduceMotion] = useState(false)
+
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const update = () => setReduceMotion(media.matches)
+    update()
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [])
+
+  useEffect(() => {
+    if (reduceMotion || failed) {
+      return
+    }
+
+    const video = videoRef.current
+    if (!video) {
+      return
+    }
+
+    void video.play().catch(() => {
+      // Keep gradient fallback when autoplay is blocked.
+    })
+  }, [failed, reduceMotion])
+
+  const isHero = variant === 'hero'
+
+  if (reduceMotion || failed) {
+    return (
+      <div
+        className={`pointer-events-none absolute inset-0 ${
+          isHero
+            ? 'bg-gradient-to-br from-[#FBF6EC] via-[#FFF8EF] to-[#F2E9D6]'
+            : 'bg-[#FBF6EC]'
+        }`}
+        aria-hidden
+      />
+    )
+  }
+
   return (
-    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[radial-gradient(circle_at_30%_30%,_#FBE3B8_0%,_#F3B85F_100%)] shadow-[0_6px_16px_rgba(243,184,95,0.4)]">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="#FFFCF4" aria-hidden>
-        <path d="M12 2 L14.5 9 L22 9.5 L16 14 L18 21.5 L12 17.5 L6 21.5 L8 14 L2 9.5 L9.5 9 Z" />
-      </svg>
+    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+      <video
+        ref={videoRef}
+        className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-[1200ms] ease-in-out ${
+          visible ? (isHero ? 'opacity-[0.42]' : 'opacity-[0.22]') : 'opacity-0'
+        }`}
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="auto"
+        onLoadedData={() => setVisible(true)}
+        onCanPlay={() => setVisible(true)}
+        onError={() => setFailed(true)}
+      >
+        <source src={LOGIN_BG_VIDEO} type="video/mp4" />
+      </video>
+      <div
+        className={
+          isHero
+            ? 'absolute inset-0 bg-gradient-to-br from-[#FBF6EC]/94 via-[#FFF8EF]/82 to-[#F2E9D6]/90'
+            : 'absolute inset-0 bg-[#FBF6EC]/88'
+        }
+      />
     </div>
   )
 }
 
-function GoogleG({ size = 18 }: { size?: number }) {
-  return (
+function GoogleG({ size = 18 }: { size?: number }) {  return (
     <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden>
       <path
         fill="#FFC107"
@@ -56,6 +114,92 @@ function GoogleG({ size = 18 }: { size?: number }) {
   )
 }
 
+function LoginActions({
+  authError,
+  isLoading,
+  onAnonymousLogin,
+  onDemoLogin,
+  onGoogleLogin,
+}: Omit<LoginPageProps, 'user'>) {
+  return (
+    <div className="flex flex-col gap-2.5" aria-label="ログイン">
+      <button
+        type="button"
+        onClick={onGoogleLogin}
+        disabled={isLoading}
+        className="flex h-[54px] w-full cursor-pointer items-center justify-center gap-2.5 rounded-full border border-[#E5E5E5] bg-[#FFFCF4] text-[15px] font-semibold text-[#494949] shadow-[0_1px_0_rgba(80,50,30,0.04),0_2px_6px_rgba(80,50,30,0.06)] transition-all duration-150 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <GoogleG size={18} />
+        Googleでログイン
+      </button>
+
+      <button
+        type="button"
+        onClick={onAnonymousLogin}
+        disabled={isLoading}
+        className="h-12 w-full cursor-pointer rounded-full border border-[#E5E5E5] bg-[#FFFCF4] text-[14px] font-medium text-[#5C5C5C] shadow-[0_1px_0_rgba(80,50,30,0.04),0_2px_6px_rgba(80,50,30,0.06)] transition-all duration-150 hover:bg-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        ゲストではじめる
+      </button>
+
+      <button
+        type="button"
+        onClick={onDemoLogin}
+        disabled={isLoading}
+        className="h-10 w-full cursor-pointer rounded-full bg-transparent text-[13px] font-medium text-[#8A8A8A] underline decoration-1 decoration-[#E5E5E5] underline-offset-4 transition-all duration-150 hover:text-[#5C5C5C] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        デモとして見る
+      </button>
+
+      <p className="-mt-1 text-center text-[11px] leading-snug text-[#8A8A8A]">
+        デモはFirebaseに接続せず、ログイン後UIだけ確認します。
+      </p>
+
+      {authError ? <p className="mt-1 text-center text-[12px] font-medium text-[#E77300]">{authError}</p> : null}
+    </div>
+  )
+}
+
+function LoginPanel({
+  authError,
+  isLoading,
+  onAnonymousLogin,
+  onDemoLogin,
+  onGoogleLogin,
+  compact = false,
+}: Omit<LoginPageProps, 'user'> & { compact?: boolean }) {
+  return (
+    <div
+      className={`grid w-full gap-5 ${
+        compact
+          ? ''
+          : 'rounded-[28px] border border-[#E5E5E5] bg-[#FFFCF4] p-7 shadow-[0_1px_0_rgba(80,50,30,0.04),0_16px_36px_rgba(80,50,30,0.08)] lg:p-8'
+      }`}
+    >
+      <div className={compact ? 'text-center' : 'text-left'}>
+        {!compact ? (
+          <p className="m-0 text-[12px] font-bold tracking-[0.16em] text-[#8A8A8A] uppercase">ログイン</p>
+        ) : null}
+        <h2 className={`m-0 font-black tracking-wide text-[#494949] ${compact ? 'text-[30px]' : 'mt-2 text-[34px]'}`}>          {compact ? 'Aicoにっち' : 'はじめまして'}
+        </h2>
+        <p className={`m-0 leading-relaxed text-[#5C5C5C] ${compact ? 'mt-2 text-[13px]' : 'mt-2 text-[15px]'}`}>
+          {compact
+            ? '好きを、キャラに。偏愛を、つなごう。'
+            : '一緒に素敵な毎日をつくろう。アカウントでログインするか、ゲストで始められます。'}
+        </p>
+      </div>
+
+      <LoginActions
+        authError={authError}
+        isLoading={isLoading}
+        onAnonymousLogin={onAnonymousLogin}
+        onDemoLogin={onDemoLogin}
+        onGoogleLogin={onGoogleLogin}
+      />
+    </div>
+  )
+}
+
 export function LoginPage({
   authError,
   isLoading,
@@ -68,76 +212,65 @@ export function LoginPage({
     return <Navigate to="/" replace />
   }
 
+  const loginProps = {
+    authError,
+    isLoading,
+    onAnonymousLogin,
+    onDemoLogin,
+    onGoogleLogin,
+  }
+
   return (
-    <div className="relative flex w-full min-h-[100svh] flex-col overflow-hidden bg-gradient-to-b from-[#FFF8EF] to-[#FBF6EC] px-7 pt-14 pb-8">
-      {/* decorative sparkles */}
-      <Sparkle className="absolute top-[70px] left-7 text-[#F3B85F]" size={18} />
-      <Sparkle className="absolute top-[130px] right-9 text-[#F3B85F]" size={14} />
-      <Sparkle className="absolute top-[280px] left-8 text-[#F8B7A8]" size={12} />
-      <Sparkle className="absolute top-[240px] right-8 text-[#CDB6E2]" size={16} />
+    <div className="relative grid min-h-[100svh] w-full overflow-hidden bg-[#FBF6EC] font-sans lg:grid-cols-[minmax(0,1.05fr)_minmax(420px,0.95fr)]">
+      {/* Desktop hero panel */}
+      <section className="relative hidden min-h-[100svh] overflow-hidden lg:flex lg:flex-col lg:justify-between">
+        <LoginBackgroundVideo variant="hero" />
 
-      {/* Hero */}
-      <div className="text-center mt-4">
-        <StarBadge />
-        <h1 className="mt-3.5 text-[30px] font-black tracking-wider text-[#494949]">HenAi Egg</h1>
-        <p className="mt-2 text-[12px] tracking-[0.16em] font-bold text-[#8A8A8A] uppercase">
-          偏愛キャラクター育成アプリ
-        </p>
-        <p className="mt-2 text-[13px] tracking-wide text-[#5C5C5C]">
-          好きを、キャラに。偏愛を、つなごう。
-        </p>
-      </div>
+        <div className="relative z-10 flex flex-1 flex-col justify-end p-12 xl:p-14">
+          <div className="grid max-w-xl gap-5">            <div className="grid gap-3">
+              <span className="inline-flex w-fit items-center rounded-full bg-[#FFE9D2] px-3 py-1 text-[12px] font-bold text-[#E77300]">
+                おかえりなさい、はじめての方も
+              </span>
+              <h1 className="m-0 text-[clamp(2.5rem,4vw,3.5rem)] font-black leading-tight tracking-wide text-[#494949]">
+                Aicoにっち
+              </h1>
+              <p className="m-0 max-w-md text-lg leading-relaxed text-[#5C5C5C]">
+                好きを、キャラに。偏愛を、つなごう。
+              </p>
+              <p className="m-0 max-w-md text-sm leading-relaxed text-[#8A8A8A]">
+                あなたの偏愛から生まれたキャラと出会い、育て、大切な人と交換しよう。
+              </p>
+            </div>
 
-      {/* Hero illustration */}
-      <div className="flex flex-1 items-center justify-center min-h-[260px] py-4">
-        <img src={loginHeroGif} alt="" className="w-[300px] max-w-full h-auto" />
-      </div>
+            <div className="flex flex-wrap gap-2">
+              {FEATURES.map((feature) => (
+                <span
+                  key={feature}
+                  className="rounded-full border border-[#E5E5E5] bg-[#FFFCF4]/88 px-3 py-1.5 text-[12px] font-bold text-[#494949] shadow-[0_1px_0_rgba(80,50,30,0.04)]"
+                >
+                  {feature}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
 
-      {/* Greeting */}
-      <p className="mb-4 text-center text-[13px] leading-relaxed text-[#5C5C5C]">
-        はじめまして！
-        <br />
-        一緒に素敵な毎日をつくろう。
-      </p>
+      {/* Login panel */}
+      <section className="relative flex min-h-[100svh] flex-col overflow-hidden px-5 py-10 lg:justify-center lg:px-10 lg:py-16 xl:px-14">
+        <div className="absolute inset-0 lg:hidden">
+          <LoginBackgroundVideo variant="ambient" />
+        </div>
 
-      {/* Sign-in buttons */}
-      <div className="flex flex-col gap-2.5" aria-label="ログイン">
-        <button
-          type="button"
-          onClick={onGoogleLogin}
-          disabled={isLoading}
-          className="w-full h-[54px] rounded-full bg-[#FFFCF4] border border-[#E8DEC5] text-[#494949] font-semibold text-[15px] flex items-center justify-center gap-2.5 shadow-[0_6px_18px_rgba(80,50,30,0.10)] active:scale-[0.98] active:shadow-[0_1px_0_rgba(80,50,30,0.10)_inset] transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-        >
-          <GoogleG size={18} />
-          Googleでログイン
-        </button>
+        <div className="relative z-10 mx-auto flex w-full max-w-[440px] min-h-0 flex-1 flex-col lg:min-h-0 lg:justify-center">
+          <div className="flex flex-1 flex-col justify-center lg:hidden">            <LoginPanel {...loginProps} compact />
+          </div>
 
-        <button
-          type="button"
-          onClick={onAnonymousLogin}
-          disabled={isLoading}
-          className="w-full h-12 rounded-full bg-transparent border border-[#E8DEC5] text-[#5C5C5C] font-medium text-[14px] active:scale-[0.98] hover:bg-white/40 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-        >
-          ゲストではじめる
-        </button>
-
-        <button
-          type="button"
-          onClick={onDemoLogin}
-          disabled={isLoading}
-          className="w-full h-10 rounded-full bg-transparent text-[#8A8A8A] font-medium text-[13px] underline underline-offset-4 decoration-1 decoration-[#CFC3A5] hover:text-[#5C5C5C] active:scale-[0.98] transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-        >
-          デモとして見る
-        </button>
-
-        <p className="text-center text-[11px] text-[#8A8A8A] -mt-1 leading-snug">
-          デモはFirebaseに接続せず、ログイン後UIだけ確認します。
-        </p>
-
-        {authError ? (
-          <p className="text-center text-[12px] font-medium text-[#E77300] mt-1">{authError}</p>
-        ) : null}
-      </div>
+          <div className="hidden lg:block">
+            <LoginPanel {...loginProps} />
+          </div>
+        </div>
+      </section>
     </div>
   )
 }
