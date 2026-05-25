@@ -136,6 +136,7 @@ function AppContent() {
                 <PassionEggCreatePage
                   userId={user?.uid ?? ''}
                   userName={user?.name ?? 'guest'}
+                  onDataChange={setData}
                 />
               </RequireAuth>
             }

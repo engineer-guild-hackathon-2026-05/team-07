@@ -1,15 +1,22 @@
 import { useMemo, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { createEggFromPassion } from '../lib/eggRepository'
+import { appendEggToLocalData } from '../lib/localRepository'
+import type { AppData } from '../types/models'
 
 type PassionEggCreatePageProps = {
   userId: string
   userName: string
+  onDataChange: (nextData: AppData) => void
 }
 
 type CreatePhase = 'idle' | 'creating' | 'done' | 'error'
 
-export function PassionEggCreatePage({ userId, userName }: PassionEggCreatePageProps) {
+export function PassionEggCreatePage({
+  userId,
+  userName,
+  onDataChange,
+}: PassionEggCreatePageProps) {
   const { passionId } = useParams()
   const [phase, setPhase] = useState<CreatePhase>('idle')
   const [eggId, setEggId] = useState('')
@@ -46,8 +53,10 @@ export function PassionEggCreatePage({ userId, userName }: PassionEggCreatePageP
 
     try {
       await new Promise((resolve) => setTimeout(resolve, 1400))
-      const createdEggId = await createEggFromPassion({ passionId, userId, userName })
-      setEggId(createdEggId)
+      const createdEgg = await createEggFromPassion({ passionId, userId, userName })
+      const nextData = appendEggToLocalData(createdEgg)
+      onDataChange(nextData)
+      setEggId(createdEgg.id)
       setPhase('done')
     } catch {
       setPhase('error')
