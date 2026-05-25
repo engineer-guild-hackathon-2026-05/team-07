@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
-import { Link, Navigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { generateAiReply } from '../lib/aiReply'
+import { finalizePassionInterview } from '../lib/passionInterview'
 import { appendPassionChatHistory, loadPassionChatHistory, type PassionChatMessage } from '../lib/passionRepository'
 
 type PassionAiChatPageProps = {
@@ -11,10 +12,12 @@ type PassionAiChatPageProps = {
 const QUICK_REPLIES = ['夜に聴くのが好き', 'ひとりの時間が好き', '誰かに勧めたい']
 
 export function PassionAiChatPage({ userId }: PassionAiChatPageProps) {
+  const navigate = useNavigate()
   const { passionId } = useParams()
   const [messages, setMessages] = useState<PassionChatMessage[]>([])
   const [input, setInput] = useState('')
   const [isSending, setIsSending] = useState(false)
+  const [isFinalizing, setIsFinalizing] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const scrollRef = useRef<HTMLDivElement | null>(null)
 
@@ -77,6 +80,23 @@ export function PassionAiChatPage({ userId }: PassionAiChatPageProps) {
       setMessages(messages)
     } finally {
       setIsSending(false)
+    }
+  }
+
+  const handleFinalize = async () => {
+    if (isFinalizing || !passionId) {
+      return
+    }
+
+    setIsFinalizing(true)
+    setErrorMessage('')
+    try {
+      await finalizePassionInterview(passionId)
+      navigate(`/passions/${passionId}/egg-create`)
+    } catch {
+      setErrorMessage('偏愛魅力の抽出に失敗しました。再試行してください。')
+    } finally {
+      setIsFinalizing(false)
     }
   }
 
@@ -276,6 +296,27 @@ export function PassionAiChatPage({ userId }: PassionAiChatPageProps) {
         className="screen-footer-bar"
         style={{ padding: '8px 16px 16px', flexShrink: 0 }}
       >
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+          <button
+            type="button"
+            onClick={() => void handleFinalize()}
+            disabled={isFinalizing}
+            style={{
+              borderRadius: 12,
+              border: '1px solid var(--card-edge)',
+              background: 'var(--card)',
+              padding: '8px 12px',
+              fontFamily: 'var(--font-body)',
+              fontSize: 12,
+              fontWeight: 700,
+              color: 'var(--coral-deep)',
+              opacity: isFinalizing ? 0.7 : 1,
+              cursor: isFinalizing ? 'wait' : 'pointer',
+            }}
+          >
+            {isFinalizing ? '抽出中...' : '対話を終了して卵を生成する'}
+          </button>
+        </div>
         <div
           style={{
             display: 'flex',
