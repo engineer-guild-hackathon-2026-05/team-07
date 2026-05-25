@@ -1,9 +1,18 @@
 import type { ReactNode } from 'react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { BottomNav } from './features/components/BottomNav'
-import { useAuth } from './firebase/auth'
-import { getMyCharacters, getMyEggs, getMyPassions, loadAppData } from './lib/localRepository'
+import { demoUser, useAuth } from './firebase/auth'
+import { fetchEggFromFirestore, fetchMyEggsFromFirestore } from './lib/eggRepository'
+import {
+  CURRENT_USER_ID,
+  getMyCharacters,
+  getMyEggs,
+  getMyPassions,
+  loadAppData,
+  resetDemoData,
+  syncEggsToLocalData,
+} from './lib/localRepository'
 import { AddPassionPage } from './pages/AddPassion'
 import { CharacterDetailPage } from './pages/CharacterDetail'
 import { DevStylePage } from './pages/DevStyle'
@@ -59,6 +68,38 @@ function AppContent() {
   const passions = useMemo(() => (currentUid ? getMyPassions(data, currentUid) : []), [data, currentUid])
   const eggs = useMemo(() => (currentUid ? getMyEggs(data, currentUid) : []), [data, currentUid])
   const characters = useMemo(() => (currentUid ? getMyCharacters(data, currentUid) : []), [data, currentUid])
+
+  useEffect(() => {
+    if (!user?.uid) {
+      return
+    }
+
+    if (user.uid === CURRENT_USER_ID || user.uid === demoUser.uid) {
+      setData(resetDemoData())
+      return
+    }
+
+    let cancelled = false
+    fetchMyEggsFromFirestore(user.uid)
+      .then((firestoreEggs) => {
+        if (cancelled || firestoreEggs.length === 0) {
+          return
+        }
+        setData(syncEggsToLocalData(firestoreEggs))
+      })
+      .catch(() => {})
+
+    return () => {
+      cancelled = true
+    }
+  }, [user?.uid])
+
+  const handleEggReceived = async (eggId: string) => {
+    const egg = await fetchEggFromFirestore(eggId)
+    if (egg) {
+      setData(syncEggsToLocalData([egg]))
+    }
+  }
   const exchanges = useMemo(
     () => data.exchanges.filter((exchange) => exchange.fromUid === currentUid || exchange.toUid === currentUid),
     [data.exchanges, currentUid],
@@ -82,7 +123,7 @@ function AppContent() {
 
   return (
     <main className={shellClass}>
-      {user ? <BottomNav firstCharacterId={characters[0]?.id} /> : null}
+      {user ? <BottomNav firstCharacterId={characters[0]?.id ?? eggs[0]?.id} /> : null}
       <div className={frameClass}>
         <Routes>
           <Route
@@ -193,7 +234,10 @@ function AppContent() {
             path="/exchange/receive/:exchangeId"
             element={
               <RequireAuth user={user}>
-                <ExchangeReceiveByIdPage isAuthenticated={Boolean(user)} />
+                <ExchangeReceiveByIdPage
+                  isAuthenticated={Boolean(user)}
+                  onEggReceived={handleEggReceived}
+                />
               </RequireAuth>
             }
           />
@@ -201,7 +245,7 @@ function AppContent() {
             path="/characters"
             element={
               <RequireAuth user={user}>
-                <CharacterDetailPage eggs={eggs} characters={characters} userId={user?.uid ?? ''} user={user!} onLogout={handleLogout} />
+                <CharacterDetailPage eggs={eggs} characters={characters} userId={user?.uid ?? ''} user={user!} onDataChange={setData} onLogout={handleLogout} />
               </RequireAuth>
             }
           />
@@ -209,7 +253,7 @@ function AppContent() {
             path="/characters/:characterId"
             element={
               <RequireAuth user={user}>
-                <CharacterDetailPage eggs={eggs} characters={characters} userId={user?.uid ?? ''} user={user!} onLogout={handleLogout} />
+                <CharacterDetailPage eggs={eggs} characters={characters} userId={user?.uid ?? ''} user={user!} onDataChange={setData} onLogout={handleLogout} />
               </RequireAuth>
             }
           />

@@ -1,22 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { Character, Chat, ChatMessage, Egg, User } from '../types/models'
+import type { AppData, Character, Chat, ChatMessage, Egg, User } from '../types/models'
 import { ChatBubble, ChatInput } from '../features/character-growing'
 import { CharacterIllustration } from '../features/components/CharacterIllustration'
 import { generateAiReply } from '../lib/aiReply'
 import { fetchChatMessages, sendMessageToCharacter } from '../lib/chatRepository'
+import { advanceLocalHatchProgress, STORAGE_KEY } from '../lib/localRepository'
 import { auth } from '../firebase/firebase'
 import { Modal } from './ui'
 
 type CharacterChatProps = {
   character: Character
   egg: Egg
+  isPreHatch?: boolean
   userId: string
   user: User
+  onDataChange?: (data: AppData) => void
   onLogout: () => Promise<void> | void
 }
-
-const STORAGE_KEY = 'henai-local-mvp-data'
 
 const createId = (prefix: string) =>
   typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -57,7 +58,15 @@ function buildMockReply(character: Character, userText: string): string {
   return pool[Math.floor(Math.random() * pool.length)]
 }
 
-export function CharacterChat({ character, egg, userId, user, onLogout }: CharacterChatProps) {
+export function CharacterChat({
+  character,
+  egg,
+  isPreHatch = false,
+  userId,
+  user,
+  onDataChange,
+  onLogout,
+}: CharacterChatProps) {
   const navigate = useNavigate()
   const historyBottomRef = useRef<HTMLDivElement>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -128,13 +137,20 @@ export function CharacterChat({ character, egg, userId, user, onLogout }: Charac
         return next
       })
 
+      const firebaseUser = auth.currentUser
+      if (isPreHatch && !firebaseUser) {
+        const progress = advanceLocalHatchProgress(egg.id, userId)
+        if (progress) {
+          onDataChange?.(progress.data)
+        }
+      }
+
       setIsLoading(true)
       setReplyFading(false)
 
       let replyText = ''
       try {
-        const firebaseUser = auth.currentUser
-        if (firebaseUser) {
+        if (firebaseUser && !isPreHatch) {
           replyText = await sendMessageToCharacter({
             characterId: character.id,
             userMessage: trimmed,
@@ -143,7 +159,7 @@ export function CharacterChat({ character, egg, userId, user, onLogout }: Charac
           replyText = await generateAiReply({
             promptType: 'character_growing',
             message: trimmed,
-            context: `characterName=${character.name}; personality=${character.personality}; knowledgeAreas=${character.knowledgeAreas.join(',')}`,
+            context: `characterName=${character.name}; personality=${character.personality}; knowledgeAreas=${character.knowledgeAreas.join(',')}; hatchLevel=${egg.hatchLevel}`,
           })
         }
       } catch {
@@ -169,10 +185,10 @@ export function CharacterChat({ character, egg, userId, user, onLogout }: Charac
         return next
       })
     },
-    [character],
+    [character, egg.hatchLevel, egg.id, isPreHatch, onDataChange, userId],
   )
 
-  const xpRatio = (character.affinityScore % 100) / 100
+  const xpRatio = isPreHatch ? egg.hatchLevel / 100 : (character.affinityScore % 100) / 100
   const userHandle = user.name || 'guest'
   const accountEmail = '@' + user.uid.slice(0, 8)
 
@@ -238,8 +254,16 @@ export function CharacterChat({ character, egg, userId, user, onLogout }: Charac
       {/* Character name + affinity badge | bell */}
       <div className="px-5 pt-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-[18px] font-bold text-[#494949]">{character.name}</span>
-          <AffinityBadge value={character.affinityScore} />
+          <span className="text-[18px] font-bold text-[#494949]">
+            {isPreHatch ? `${egg.name}の卵` : character.name}
+          </span>
+          {isPreHatch ? (
+            <span className="inline-flex items-center px-2.5 py-[3px] rounded-full bg-[#FFF1DF] text-[#E77300] font-bold text-[11px] whitespace-nowrap">
+              孵化前
+            </span>
+          ) : (
+            <AffinityBadge value={character.affinityScore} />
+          )}
         </div>
         <button
           type="button"
@@ -254,13 +278,21 @@ export function CharacterChat({ character, egg, userId, user, onLogout }: Charac
       {/* Level + mood + XP bar */}
       <div className="px-5 pt-3">
         <div className="flex items-center gap-2 mb-1.5">
-          <span className="inline-flex items-center px-2.5 py-[3px] rounded-full bg-[#FFE9D2] text-[#E77300] font-bold text-[12px] whitespace-nowrap">
-            Lv. {character.growthLevel}
-          </span>
-          <span className="inline-flex items-center gap-1 text-[12px] text-[#5C5C5C]">
-            ごきげん
-            <SmileGlyph />
-          </span>
+          {isPreHatch ? (
+            <span className="inline-flex items-center px-2.5 py-[3px] rounded-full bg-[#FFE9D2] text-[#E77300] font-bold text-[12px] whitespace-nowrap">
+              孵化 {egg.hatchLevel}%
+            </span>
+          ) : (
+            <>
+              <span className="inline-flex items-center px-2.5 py-[3px] rounded-full bg-[#FFE9D2] text-[#E77300] font-bold text-[12px] whitespace-nowrap">
+                Lv. {character.growthLevel}
+              </span>
+              <span className="inline-flex items-center gap-1 text-[12px] text-[#5C5C5C]">
+                ごきげん
+                <SmileGlyph />
+              </span>
+            </>
+          )}
         </div>
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#F2E9D6]">
           <div
@@ -268,6 +300,11 @@ export function CharacterChat({ character, egg, userId, user, onLogout }: Charac
             style={{ width: `${Math.max(8, xpRatio * 100)}%` }}
           />
         </div>
+        {isPreHatch ? (
+          <p className="mt-2 text-[11px] leading-relaxed text-[#5C5C5C]">
+            まだキャラは孵化していません。話しかけて卵を育てましょう。
+          </p>
+        ) : null}
       </div>
 
       {/* History button — top-right, below header */}
@@ -314,7 +351,7 @@ export function CharacterChat({ character, egg, userId, user, onLogout }: Charac
               breathe ? 'translate-y-0 scale-[1.015]' : 'translate-y-[2px] scale-100'
             }`}
           >
-            <CharacterIllustration egg={egg} size="large" />
+            <CharacterIllustration egg={egg} size="large" showAsEgg={isPreHatch} />
           </div>
 
           {/* Status button right below the character */}
@@ -323,23 +360,25 @@ export function CharacterChat({ character, egg, userId, user, onLogout }: Charac
             onClick={() => setShowStatus(true)}
             className="text-xs text-[#e77300] font-bold px-3 py-1 rounded-full border border-[#f1e7dc] bg-[#fff8f0] hover:bg-[#fff1df] transition-colors"
           >
-            ステータスを見る ›
+            {isPreHatch ? '卵の情報を見る ›' : 'ステータスを見る ›'}
           </button>
         </div>
       </div>
 
-      {/* Action pills */}
-      <div className="px-4 pt-1.5 pb-3 grid grid-cols-4 gap-2.5">
-        <ActionPill tint="honey" label="ごはん" icon={<BowlIcon />} />
-        <ActionPill tint="coral" label="なでる" icon={<HandIcon />} />
-        <ActionPill tint="sky" label="あそぶ" icon={<GameIcon />} />
-        <ActionPill
-          tint="sage"
-          label="交換"
-          icon={<SwapIcon />}
-          onClick={() => navigate('/exchange/share')}
-        />
-      </div>
+      {/* Action pills — 孵化前はまだ使えない */}
+      {!isPreHatch ? (
+        <div className="px-4 pt-1.5 pb-3 grid grid-cols-4 gap-2.5">
+          <ActionPill tint="honey" label="ごはん" icon={<BowlIcon />} />
+          <ActionPill tint="coral" label="なでる" icon={<HandIcon />} />
+          <ActionPill tint="sky" label="あそぶ" icon={<GameIcon />} />
+          <ActionPill
+            tint="sage"
+            label="交換"
+            icon={<SwapIcon />}
+            onClick={() => navigate('/exchange/share')}
+          />
+        </div>
+      ) : null}
 
       {/* Spacer so content isn't hidden behind the floating ChatInput */}
       <div className="h-[calc(80px+env(safe-area-inset-bottom,0px))]" />
@@ -348,11 +387,37 @@ export function CharacterChat({ character, egg, userId, user, onLogout }: Charac
       <ChatInput onSend={sendMessage} disabled={isLoading} />
 
       {/* Status modal */}
-      <Modal isOpen={showStatus} onClose={() => setShowStatus(false)} title="キャラクターステータス">
+      <Modal
+        isOpen={showStatus}
+        onClose={() => setShowStatus(false)}
+        title={isPreHatch ? '卵の情報' : 'キャラクターステータス'}
+      >
         <div className="flex flex-col gap-4 mt-2">
-          <StatusRow label="性格">
-            <p className="text-sm text-[#494949]">{character.personality}</p>
-          </StatusRow>
+          {isPreHatch ? (
+            <>
+              <StatusRow label="卵の名前">
+                <p className="text-sm text-[#494949]">{egg.name}</p>
+              </StatusRow>
+              <StatusRow label="孵化の進み">
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-2 bg-[#f1e7dc] rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-[#ff9b37] rounded-full transition-[width] duration-300"
+                      style={{ width: `${Math.max(8, egg.hatchLevel)}%` }}
+                    />
+                  </div>
+                  <span className="text-sm font-bold text-[#e77300]">{egg.hatchLevel}%</span>
+                </div>
+              </StatusRow>
+              <StatusRow label="中身の偏愛">
+                <p className="text-sm text-[#494949]">{egg.characterPrompt}</p>
+              </StatusRow>
+            </>
+          ) : (
+            <>
+              <StatusRow label="性格">
+                <p className="text-sm text-[#494949]">{character.personality}</p>
+              </StatusRow>
           <StatusRow label="成長レベル">
             <div className="flex items-center gap-2">
               <div className="flex-1 h-2 bg-[#f1e7dc] rounded-full overflow-hidden">
@@ -403,6 +468,8 @@ export function CharacterChat({ character, egg, userId, user, onLogout }: Charac
               )}
             </div>
           </StatusRow>
+            </>
+          )}
         </div>
       </Modal>
 
