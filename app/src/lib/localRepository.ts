@@ -264,6 +264,19 @@ export const createPassion = (input: PassionInput, uid = CURRENT_USER_ID) => {
   })
 }
 
+export const appendEggToLocalData = (egg: Egg) => {
+  const data = readData()
+  const exists = data.eggs.some((item) => item.id === egg.id)
+  if (exists) {
+    return data
+  }
+
+  return writeData({
+    ...data,
+    eggs: [egg, ...data.eggs],
+  })
+}
+
 export const receiveEggLocally = (eggId: string, toUid: string, meetingContext: string) => {
   const data = readData()
   const egg = data.eggs.find((item) => item.id === eggId)

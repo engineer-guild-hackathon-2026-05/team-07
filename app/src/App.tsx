@@ -13,6 +13,7 @@ import { ExchangeWaitPage } from './pages/ExchangeWait'
 import { HomePage } from './pages/Home'
 import { LoginPage } from './pages/Login'
 import { PassionAiChatPage } from './pages/PassionAiChat'
+import { PassionEggCreatePage } from './pages/PassionEggCreate'
 import { ProfilePage } from './pages/Profile'
 import type { AppData, User } from './types/models'
 
@@ -124,6 +125,18 @@ function AppContent() {
             element={
               <RequireAuth user={user}>
                 <PassionAiChatPage userId={user?.uid ?? ''} />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/passions/:passionId/egg-create"
+            element={
+              <RequireAuth user={user}>
+                <PassionEggCreatePage
+                  userId={user?.uid ?? ''}
+                  userName={user?.name ?? 'guest'}
+                  onDataChange={setData}
+                />
               </RequireAuth>
             }
           />

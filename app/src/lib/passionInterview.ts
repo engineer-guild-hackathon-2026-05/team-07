@@ -11,10 +11,12 @@ type FinalizeInterviewInput = { passionId: string }
 type StartInterviewOutput = {
   overview: string
   messages: PassionChatMessage[]
+  choices?: string[]
 }
 
 type ContinueInterviewOutput = {
   reply: string
+  choices?: string[]
 }
 
 type FinalizeInterviewOutput = {

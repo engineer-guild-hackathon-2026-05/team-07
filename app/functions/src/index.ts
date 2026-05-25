@@ -1,6 +1,6 @@
-export { sendMessage } from "./chat/sendMessage.js";
+export {sendMessage} from "./chat/sendMessage.js";
 
-import { HttpsError, onCall } from "firebase-functions/v2/https";
+import {HttpsError, onCall} from "firebase-functions/v2/https";
 import characterMakingPrompt from "./prompts/character_making.json";
 import characterGrowingPrompt from "./prompts/character_growing.json";
 

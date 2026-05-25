@@ -22,6 +22,8 @@ export async function createPassionInFirestore(input: PassionInput, ownerUid: st
     overview: `${input.title}\n${input.description}\n${input.tags.map((tag) => `#${tag}`).join(' ')}`.trim(),
     makingStatus: 'draft',
     subjectAttractions: [],
+    latestInterviewQuestion: '',
+    latestReplyChoices: [],
     chatHistory: [],
   })
 
@@ -32,16 +34,18 @@ export async function loadPassionProfile(passionId: string): Promise<{
   overview: string
   subjectAttractions: string[]
   makingStatus: 'draft' | 'interviewing' | 'finalized'
+  latestReplyChoices: string[]
 }> {
   const passionRef = doc(db, COLLECTIONS.PASSIONS, passionId)
   const snap = await getDoc(passionRef)
   if (!snap.exists()) {
-    return { overview: '', subjectAttractions: [], makingStatus: 'draft' }
+    return { overview: '', subjectAttractions: [], makingStatus: 'draft', latestReplyChoices: [] }
   }
   const data = snap.data() as {
     overview?: unknown
     subjectAttractions?: unknown
     makingStatus?: unknown
+    latestReplyChoices?: unknown
   }
   return {
     overview: typeof data.overview === 'string' ? data.overview : '',
@@ -50,6 +54,9 @@ export async function loadPassionProfile(passionId: string): Promise<{
       : [],
     makingStatus:
       data.makingStatus === 'interviewing' || data.makingStatus === 'finalized' ? data.makingStatus : 'draft',
+    latestReplyChoices: Array.isArray(data.latestReplyChoices)
+      ? data.latestReplyChoices.filter((v): v is string => typeof v === 'string').slice(0, 3)
+      : [],
   }
 }
 

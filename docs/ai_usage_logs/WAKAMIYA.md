@@ -482,6 +482,47 @@
 
 ---
 
+### #012 キャラメイクAIのプロンプトJSON化と選択肢メタ保存
+
+- **時刻**：21:25
+- **ツール**：Codex (GPT-5)
+- **目的**：キャラメイク領域のAI処理をプロンプト分離・JSON入力化し、選択肢を再表示可能にする
+- **プロンプト**：
+  ```
+  ...プロンプトも含めて、AI周りの機能を全体的に実装してください。
+  育成のところなどは触らずに、基本的にはキャラメイクのところでお願いします。
+  agentsに従ったデータ構造は守ってね。フィールドを足すのは良いけど、他のドキュメントとかフィールドと競合したり上書きしないようにね
+  ```
+- **出力サマリ**：
+  - `functions/src/prompts/` に `character_making_start/turn/finalize.json` を追加し、interview callable で使用。
+  - `start/continue/finalize` の OpenAI 入力を JSON ペイロード化（task, passion, conversation, outputSchema）して統一。
+  - `passions` に `latestInterviewQuestion` / `latestReplyChoices` を追加し、`merge: true` で保存して既存フィールド競合を回避。
+  - `PassionAiChat` 初期化時に `latestReplyChoices` を復元し、選択肢ボタン表示の継続性を改善。
+  - `firestore.rules` と型定義を拡張して新規フィールドを許可。
+- **評価**：採用
+- **採用 / 不採用の理由**：キャラメイクに限定しつつ、プロンプトとデータ構造を一貫化できたため。
+
+---
+
+### #013 偏愛抽出後の卵生成ステップ追加（演出付き）
+
+- **時刻**：22:05
+- **ツール**：Codex (GPT-5)
+- **目的**：偏愛抽出完了後に卵作成専用画面へ遷移し、作成演出と完了表示を実装する
+- **プロンプト**：
+  ```
+  eggs偏愛を抽出したら、次の画面に写って、卵を作成する、をおしてエフェクトつけて卵ができました！みたいにしたい
+  ```
+- **出力サマリ**：
+  - `PassionAiChat` の抽出完了後遷移を `/passions/:passionId/egg-create` に変更。
+  - `PassionEggCreatePage` を新規追加し、「卵を作成する」押下で演出（pulse/pop）→作成完了表示を実装。
+  - `eggRepository` を新規追加し、`passions` の概要・抽出魅力を `characterPrompt` に反映して `eggs` へ保存。
+  - ルーティングに新画面を追加し、認証済みユーザー導線で接続。
+- **評価**：採用
+- **採用 / 不採用の理由**：キャラメイク導線内で「抽出→生成」の体験を明確化できたため。
+
+---
+
 ### #008 OpenAIレスポンス抽出ロジックの再強化
 
 - **時刻**：17:35
