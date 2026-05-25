@@ -66,14 +66,13 @@
 - **フロント**： React, TypeScript, vite
 - **バックエンド**： Firebase（Cloud Functions / Authentication）
 - **インフラ**： Firebase
-- **利用 AI ツール**： Claude, ChatGPT, Gemini, Cursor
+- **利用 AI ツール**： Claude, ChatGPT, Gemini, Cursor, github copilot
 
 ### 使用した外部 API / サービス
 
 | サービス名 | 用途 | プラン | 備考 |
 |---|---|---|---|
-| 例: OpenAI API | 〜の生成 | Pay-as-you-go | 概算コスト ¥XX |
-| | | | |
+| OpenAI API | チャットの生成 | クレジット購入 | 概算コスト ¥500 |
 
 → API キー・秘匿情報は `.env`（`.gitignore` 対象）で管理。公開リポ化に備えて漏らさないこと。
 
