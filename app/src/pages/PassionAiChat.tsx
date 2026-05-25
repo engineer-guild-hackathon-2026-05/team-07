@@ -86,7 +86,7 @@ export function PassionAiChatPage({ userId }: PassionAiChatPageProps) {
         ))}
       </div>
 
-      <div className="border-t border-[#f1e7dc] bg-white px-3 pb-4 pt-3">
+      <div className="screen-footer-bar border-t border-[#f1e7dc] bg-white px-3 pb-4 pt-3">
         <div className="flex gap-2">
           <input
             className="flex-1 rounded-2xl border border-[#f1e7dc] px-4 py-3 text-sm outline-none transition focus:border-[#ff9b37] focus:ring-2 focus:ring-[#ff9b37]/20"
