@@ -3,6 +3,9 @@ import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../admin.js";
 import { COLLECTIONS, SUBCOLLECTIONS } from "../types/firestore.js";
 import type { PassionDoc, PassionMakingMessageDoc } from "../types/firestore.js";
+import makingStartPrompt from "../prompts/character_making_start.json";
+import makingTurnPrompt from "../prompts/character_making_turn.json";
+import makingFinalizePrompt from "../prompts/character_making_finalize.json";
 
 const OPENAI_API_URL = "https://api.openai.com/v1/responses";
 const DEFAULT_MODEL = "gpt-4.1-mini";
@@ -112,18 +115,27 @@ export const startPassionInterview = onCall(
       return {
         overview,
         messages: list.docs.map((d) => d.data() as PassionMakingMessageDoc),
+        choices: Array.isArray(passion.latestReplyChoices) ? passion.latestReplyChoices : [],
       };
     }
 
     const assistantRaw = await callOpenAi([
       {
         role: "system",
-        content:
-          "あなたは偏愛インタビュアーです。ユーザーの偏愛対象の魅力を抽出するため、短く具体的な質問を1つ作り、回答候補を3つ提案してください。JSONのみで返答: {\"question\":\"...\",\"choices\":[\"...\",\"...\",\"...\"]}",
+        content: makingStartPrompt.systemPrompt,
       },
       {
         role: "user",
-        content: `この偏愛の最初の質問を作ってください。\n${overview}`,
+        content: JSON.stringify({
+          task: "start_interview",
+          passion: {
+            passionId,
+            title: passion.title,
+            overview,
+            tags: passion.tags,
+          },
+          outputSchema: makingStartPrompt.outputSchema,
+        }),
       },
     ]);
     const assistantTurn = parseInterviewTurn(assistantRaw);
@@ -131,7 +143,13 @@ export const startPassionInterview = onCall(
     await db.runTransaction(async (tx) => {
       tx.set(
         passionRef,
-        { overview, makingStatus: "interviewing", subjectAttractions: passion.subjectAttractions ?? [] },
+        {
+          overview,
+          makingStatus: "interviewing",
+          subjectAttractions: passion.subjectAttractions ?? [],
+          latestInterviewQuestion: assistantTurn.question,
+          latestReplyChoices: assistantTurn.choices,
+        },
         { merge: true },
       );
       tx.set(messagesRef.doc(), {
@@ -176,12 +194,23 @@ export const continuePassionInterview = onCall(
     const assistantRaw = await callOpenAi([
       {
         role: "system",
-        content:
-          "あなたは偏愛インタビュアーです。偏愛対象の魅力が具体化するように質問を1つ返し、回答候補を3つ提案してください。JSONのみで返答: {\"question\":\"...\",\"choices\":[\"...\",\"...\",\"...\"]}",
+        content: makingTurnPrompt.systemPrompt,
       },
-      { role: "user", content: `偏愛概要:\n${overview}` },
-      ...history,
-      { role: "user", content: userMessage },
+      {
+        role: "user",
+        content: JSON.stringify({
+          task: "continue_interview",
+          passion: {
+            passionId,
+            title: passion.title,
+            overview,
+            tags: passion.tags,
+          },
+          conversation: history,
+          userMessage,
+          outputSchema: makingTurnPrompt.outputSchema,
+        }),
+      },
     ]);
     const assistantTurn = parseInterviewTurn(assistantRaw);
 
@@ -189,7 +218,16 @@ export const continuePassionInterview = onCall(
     const batch = db.batch();
     batch.set(messagesRef.doc(), { role: "user", content: userMessage, createdAt: now });
     batch.set(messagesRef.doc(), { role: "assistant", content: assistantTurn.question, createdAt: now });
-    batch.set(passionRef, { overview, makingStatus: "interviewing" }, { merge: true });
+    batch.set(
+      passionRef,
+      {
+        overview,
+        makingStatus: "interviewing",
+        latestInterviewQuestion: assistantTurn.question,
+        latestReplyChoices: assistantTurn.choices,
+      },
+      { merge: true },
+    );
     await batch.commit();
 
     return { reply: assistantTurn.question, choices: assistantTurn.choices };
@@ -224,20 +262,29 @@ export const finalizePassionInterview = onCall(
     const extraction = await callOpenAi([
       {
         role: "system",
-        content:
-          "あなたは偏愛分析AIです。会話から偏愛対象の魅力を抽出します。JSONのみで {\"attractions\":[\"...\"]} を返してください。",
+        content: makingFinalizePrompt.systemPrompt,
       },
       {
         role: "user",
-        content: `偏愛概要:\n${overview}\n\n会話:\n${transcript}`,
+        content: JSON.stringify({
+          task: "extract_attractions",
+          passion: {
+            passionId,
+            title: passion.title,
+            overview,
+            tags: passion.tags,
+          },
+          transcript,
+          outputSchema: makingFinalizePrompt.outputSchema,
+        }),
       },
     ]);
 
     let attractions: string[] = [];
     try {
-      const parsed = JSON.parse(extraction) as { attractions?: unknown };
-      if (Array.isArray(parsed.attractions)) {
-        attractions = parsed.attractions
+      const parsed = JSON.parse(extraction) as { subjectAttractions?: unknown };
+      if (Array.isArray(parsed.subjectAttractions)) {
+        attractions = parsed.subjectAttractions
           .filter((v): v is string => typeof v === "string")
           .map((v) => v.trim())
           .filter((v) => v.length > 0)
@@ -256,6 +303,7 @@ export const finalizePassionInterview = onCall(
         overview,
         subjectAttractions: attractions,
         makingStatus: "finalized",
+        latestReplyChoices: [],
       },
       { merge: true },
     );

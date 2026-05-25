@@ -31,6 +31,7 @@ export function PassionAiChatPage({ userId }: PassionAiChatPageProps) {
       try {
         const [profile, loadedMessages] = await Promise.all([loadPassionProfile(passionId), loadMakingMessages(passionId)])
         setSubjectAttractions(profile.subjectAttractions)
+        setReplyChoices(profile.latestReplyChoices)
 
         if (loadedMessages.length > 0) {
           setMessages(loadedMessages)
