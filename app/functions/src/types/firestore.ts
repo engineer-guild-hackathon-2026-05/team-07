@@ -45,6 +45,8 @@ export type CollectionName = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];
 export const SUBCOLLECTIONS = {
   /** chats/{chatId}/messages/{messageId} */
   CHAT_MESSAGES: "messages",
+  /** passions/{passionId}/makingMessages/{messageId} */
+  PASSION_MAKING_MESSAGES: "makingMessages",
 } as const;
 
 export type SubcollectionName =
@@ -105,7 +107,13 @@ export interface PassionDoc {
   /** Creation time */
   createdAt: DateLike;
   /** Visibility scope */
-  visibility: "public" | "private";
+  visibility: "public" | "friends" | "private";
+  /** Input summary normalized for AI interview prompt */
+  overview?: string;
+  /** Interview lifecycle */
+  makingStatus?: "draft" | "interviewing" | "finalized";
+  /** Extracted unique attractions of the passion subject */
+  subjectAttractions?: string[];
 }
 
 /** eggs/{eggId} */
@@ -152,6 +160,11 @@ export interface CharacterDoc {
   affinityScore: number;
   /** Topics unlocked through accumulated conversation */
   unlockedTopics: string[];
+  /** Condensed passion memory injected into growing chat */
+  passionMemory?: {
+    overview: string;
+    attractions: string[];
+  };
   /** Creation time */
   createdAt: DateLike;
   /** Last interaction / growth update time */
@@ -206,6 +219,17 @@ export interface ChatMessageDoc {
   /** Text content */
   content: string;
   /** Message send time */
+  createdAt: DateLike;
+  /** Optional growth score for this user message */
+  score?: number;
+  /** Why the message got this score */
+  scoreReason?: string;
+}
+
+/** passions/{passionId}/makingMessages/{messageId} */
+export interface PassionMakingMessageDoc {
+  role: "user" | "assistant";
+  content: string;
   createdAt: DateLike;
 }
 

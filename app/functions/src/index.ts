@@ -194,3 +194,8 @@ export const generatePassionReply = onCall(
 
 export {createUrlExchange} from "./exchange/createUrlExchange";
 export {completeExchange} from "./exchange/completeExchange";
+export {
+  startPassionInterview,
+  continuePassionInterview,
+  finalizePassionInterview,
+} from "./characterMaking/interview";
