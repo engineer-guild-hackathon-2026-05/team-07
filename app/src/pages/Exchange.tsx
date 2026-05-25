@@ -1,7 +1,7 @@
 import type { FormEvent } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { collection, getDocs, query, where } from 'firebase/firestore'
+import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore'
 import { Button, Card, StackedActionButton, TextField, Textarea } from '../components/ui'
 import { ExchangePreviewCard } from '../features/components/ExchangePreviewCard'
 import { EggArt } from '../features/components/EggArt'
@@ -84,6 +84,8 @@ export function ExchangePage({
   const [isPublishing, setIsPublishing] = useState(false)
   const [publishError, setPublishError] = useState('')
   const [remoteOwnedEggs, setRemoteOwnedEggs] = useState<Egg[]>([])
+  const [remotePassions, setRemotePassions] = useState<Passion[]>([])
+  const [remoteCharacters, setRemoteCharacters] = useState<Character[]>([])
 
   const ownedEggs = useMemo(() => {
     const merged = [...eggs, ...remoteOwnedEggs]
@@ -96,10 +98,32 @@ export function ExchangePage({
       return true
     })
   }, [eggs, remoteOwnedEggs])
+  const mergedPassions = useMemo(() => {
+    const merged = [...allPassions, ...remotePassions]
+    const seen = new Set<string>()
+    return merged.filter((passion) => {
+      if (seen.has(passion.id)) {
+        return false
+      }
+      seen.add(passion.id)
+      return true
+    })
+  }, [allPassions, remotePassions])
+  const mergedCharacters = useMemo(() => {
+    const merged = [...characters, ...remoteCharacters]
+    const seen = new Set<string>()
+    return merged.filter((character) => {
+      if (seen.has(character.id)) {
+        return false
+      }
+      seen.add(character.id)
+      return true
+    })
+  }, [characters, remoteCharacters])
 
   const selectedEgg = ownedEggs.find((egg) => egg.id === selectedEggId) ?? ownedEggs[0]
-  const selectedPassion = selectedEgg ? getPassionForEgg(allPassions, selectedEgg) : undefined
-  const selectedCharacter = selectedEgg ? getCharacterForEgg(characters, selectedEgg) : undefined
+  const selectedPassion = selectedEgg ? getPassionForEgg(mergedPassions, selectedEgg) : undefined
+  const selectedCharacter = selectedEgg ? getCharacterForEgg(mergedCharacters, selectedEgg) : undefined
 
   const receiveEgg = useMemo(() => {
     if (!receiveEggId) {
@@ -178,6 +202,97 @@ export function ExchangePage({
 
     void loadOwnedEggs().catch(() => setRemoteOwnedEggs([]))
   }, [userId])
+
+  useEffect(() => {
+    const missingPassionIds = Array.from(
+      new Set(
+        ownedEggs
+          .flatMap((egg) => egg.basedOnPassionIds)
+          .filter((id) => !allPassions.some((passion) => passion.id === id)),
+      ),
+    )
+    const missingCharacterEggIds = ownedEggs
+      .map((egg) => egg.id)
+      .filter((eggId) => !characters.some((character) => character.eggId === eggId))
+
+    if (missingPassionIds.length === 0) {
+      setRemotePassions([])
+    }
+    if (missingCharacterEggIds.length === 0) {
+      setRemoteCharacters([])
+    }
+    if (missingPassionIds.length === 0 && missingCharacterEggIds.length === 0) {
+      return
+    }
+
+    const loadRemoteMenuData = async () => {
+      const fetchedPassions = await Promise.all(
+        missingPassionIds.map(async (passionId) => {
+          const ref = doc(db, COLLECTIONS.PASSIONS, passionId)
+          const snap = await getDoc(ref)
+          if (!snap.exists()) {
+            return null
+          }
+          const data = snap.data() as {
+            ownerUid?: unknown
+            title?: unknown
+            description?: unknown
+            tags?: unknown
+            visibility?: unknown
+          }
+          return {
+            id: snap.id,
+            ownerUid: typeof data.ownerUid === 'string' ? data.ownerUid : '',
+            title: typeof data.title === 'string' ? data.title : '偏愛タイトル未設定',
+            description: typeof data.description === 'string' ? data.description : '',
+            tags: Array.isArray(data.tags) ? data.tags.filter((v): v is string => typeof v === 'string') : [],
+            createdAt: new Date().toISOString(),
+            visibility: data.visibility === 'friends' || data.visibility === 'private' ? data.visibility : 'public',
+          } satisfies Passion
+        }),
+      )
+      setRemotePassions(fetchedPassions.filter((passion): passion is Passion => passion !== null))
+
+      const fetchedCharacters = await Promise.all(
+        missingCharacterEggIds.map(async (eggId) => {
+          const ref = doc(db, COLLECTIONS.CHARACTERS, eggId)
+          const snap = await getDoc(ref)
+          if (!snap.exists()) {
+            return null
+          }
+          const data = snap.data() as {
+            eggId?: unknown
+            name?: unknown
+            personality?: unknown
+            knowledgeAreas?: unknown
+            growthLevel?: unknown
+            affinityScore?: unknown
+            unlockedTopics?: unknown
+          }
+          return {
+            id: snap.id,
+            eggId: typeof data.eggId === 'string' ? data.eggId : eggId,
+            name: typeof data.name === 'string' ? data.name : 'キャラ未設定',
+            personality: typeof data.personality === 'string' ? data.personality : '',
+            knowledgeAreas: Array.isArray(data.knowledgeAreas)
+              ? data.knowledgeAreas.filter((v): v is string => typeof v === 'string')
+              : [],
+            growthLevel: typeof data.growthLevel === 'number' ? data.growthLevel : 1,
+            affinityScore: typeof data.affinityScore === 'number' ? data.affinityScore : 0,
+            unlockedTopics: Array.isArray(data.unlockedTopics)
+              ? data.unlockedTopics.filter((v): v is string => typeof v === 'string')
+              : [],
+          } satisfies Character
+        }),
+      )
+      setRemoteCharacters(fetchedCharacters.filter((character): character is Character => character !== null))
+    }
+
+    void loadRemoteMenuData().catch(() => {
+      setRemotePassions([])
+      setRemoteCharacters([])
+    })
+  }, [ownedEggs, allPassions, characters])
 
   useEffect(() => {
     if (!shareStatus) {
