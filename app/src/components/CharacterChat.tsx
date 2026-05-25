@@ -4,8 +4,15 @@ import type { AppData, Character, Chat, ChatMessage, Egg, User } from '../types/
 import { ChatBubble, ChatInput } from '../features/character-growing'
 import { CharacterIllustration } from '../features/components/CharacterIllustration'
 import { generateAiReply } from '../lib/aiReply'
+import { fetchCharacterFromFirestore } from '../lib/characterRepository'
 import { fetchChatMessages, sendMessageToCharacter } from '../lib/chatRepository'
-import { advanceLocalHatchProgress, STORAGE_KEY } from '../lib/localRepository'
+import { advanceHatchProgress } from '../lib/hatchRepository'
+import {
+  advanceLocalHatchProgress,
+  applyHatchProgressToAppData,
+  loadAppData,
+  STORAGE_KEY,
+} from '../lib/localRepository'
 import { auth } from '../firebase/firebase'
 import { Modal } from './ui'
 
@@ -138,10 +145,29 @@ export function CharacterChat({
       })
 
       const firebaseUser = auth.currentUser
-      if (isPreHatch && !firebaseUser) {
-        const progress = advanceLocalHatchProgress(egg.id, userId)
-        if (progress) {
-          onDataChange?.(progress.data)
+      if (isPreHatch) {
+        if (firebaseUser) {
+          try {
+            const result = await advanceHatchProgress(egg.id)
+            const hatchedCharacter =
+              result.hatched && result.characterId
+                ? ((await fetchCharacterFromFirestore(result.characterId)) ?? undefined)
+                : undefined
+            const nextData = applyHatchProgressToAppData(
+              loadAppData(),
+              egg.id,
+              result.hatchLevel,
+              hatchedCharacter,
+            )
+            onDataChange?.(nextData)
+          } catch {
+            // 孵化進行失敗時もチャット自体は継続する
+          }
+        } else {
+          const progress = advanceLocalHatchProgress(egg.id, userId)
+          if (progress) {
+            onDataChange?.(progress.data)
+          }
         }
       }
 

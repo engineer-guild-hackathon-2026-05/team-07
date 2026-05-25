@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { BottomNav } from './features/components/BottomNav'
 import { demoUser, useAuth } from './firebase/auth'
+import { fetchMyCharactersFromFirestore } from './lib/characterRepository'
 import { fetchEggFromFirestore, fetchMyEggsFromFirestore } from './lib/eggRepository'
 import {
   CURRENT_USER_ID,
@@ -12,6 +13,7 @@ import {
   loadAppData,
   resetDemoData,
   syncEggsToLocalData,
+  syncFirestoreGrowthToLocalData,
 } from './lib/localRepository'
 import { AddPassionPage } from './pages/AddPassion'
 import { CharacterDetailPage } from './pages/CharacterDetail'
@@ -80,12 +82,15 @@ function AppContent() {
     }
 
     let cancelled = false
-    fetchMyEggsFromFirestore(user.uid)
-      .then((firestoreEggs) => {
-        if (cancelled || firestoreEggs.length === 0) {
+    Promise.all([fetchMyEggsFromFirestore(user.uid), fetchMyCharactersFromFirestore(user.uid)])
+      .then(([firestoreEggs, firestoreCharacters]) => {
+        if (cancelled) {
           return
         }
-        setData(syncEggsToLocalData(firestoreEggs))
+        if (firestoreEggs.length === 0 && firestoreCharacters.length === 0) {
+          return
+        }
+        setData(syncFirestoreGrowthToLocalData(firestoreEggs, firestoreCharacters))
       })
       .catch(() => {})
 

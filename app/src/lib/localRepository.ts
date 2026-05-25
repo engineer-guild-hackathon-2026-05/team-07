@@ -294,6 +294,59 @@ export const syncEggsToLocalData = (eggs: Egg[]) => {
   return writeData(mergeEggsIntoAppData(data, eggs))
 }
 
+export const mergeCharactersIntoAppData = (data: AppData, incoming: Character[]): AppData => {
+  if (incoming.length === 0) {
+    return data
+  }
+
+  const byId = new Map(data.characters.map((character) => [character.id, character]))
+  for (const character of incoming) {
+    byId.set(character.id, character)
+  }
+
+  return {
+    ...data,
+    characters: Array.from(byId.values()),
+  }
+}
+
+export const syncCharactersToLocalData = (characters: Character[]) => {
+  const data = readData()
+  return writeData(mergeCharactersIntoAppData(data, characters))
+}
+
+export const syncFirestoreGrowthToLocalData = (eggs: Egg[], characters: Character[]) => {
+  let next = readData()
+  if (eggs.length > 0) {
+    next = mergeEggsIntoAppData(next, eggs)
+  }
+  if (characters.length > 0) {
+    next = mergeCharactersIntoAppData(next, characters)
+  }
+  if (eggs.length === 0 && characters.length === 0) {
+    return next
+  }
+  return writeData(next)
+}
+
+export const applyHatchProgressToAppData = (
+  data: AppData,
+  eggId: string,
+  hatchLevel: number,
+  character?: Character,
+): AppData => {
+  const eggs = data.eggs.map((item) => (item.id === eggId ? { ...item, hatchLevel } : item))
+  const characters = character
+    ? [character, ...data.characters.filter((item) => item.id !== character.id)]
+    : data.characters
+
+  return writeData({
+    ...data,
+    eggs,
+    characters,
+  })
+}
+
 export type HatchProgressResult = {
   data: AppData
   hatched: boolean
