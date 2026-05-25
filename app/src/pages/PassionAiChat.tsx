@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
-import { generateAiReply } from '../lib/aiReply'
-import { appendPassionChatHistory, loadPassionChatHistory, type PassionChatMessage } from '../lib/passionRepository'
+import {
+  continuePassionInterview,
+  finalizePassionInterview,
+  loadMakingMessages,
+  startPassionInterview,
+} from '../lib/passionInterview'
+import { loadPassionProfile, type PassionChatMessage } from '../lib/passionRepository'
 
 type PassionAiChatPageProps = {
   userId: string
@@ -12,13 +17,33 @@ export function PassionAiChatPage({ userId }: PassionAiChatPageProps) {
   const [messages, setMessages] = useState<PassionChatMessage[]>([])
   const [input, setInput] = useState('')
   const [isSending, setIsSending] = useState(false)
+  const [isFinalizing, setIsFinalizing] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+  const [subjectAttractions, setSubjectAttractions] = useState<string[]>([])
 
   useEffect(() => {
     if (!passionId) {
       return
     }
-    loadPassionChatHistory(passionId).then(setMessages).catch(() => setMessages([]))
+
+    const bootstrap = async () => {
+      try {
+        const [profile, loadedMessages] = await Promise.all([loadPassionProfile(passionId), loadMakingMessages(passionId)])
+        setSubjectAttractions(profile.subjectAttractions)
+
+        if (loadedMessages.length > 0) {
+          setMessages(loadedMessages)
+          return
+        }
+
+        const started = await startPassionInterview(passionId)
+        setMessages(started.messages)
+      } catch {
+        setErrorMessage('初期化に失敗しました。時間をおいて再試行してください。')
+      }
+    }
+
+    void bootstrap()
   }, [passionId])
 
   if (!userId) {
@@ -49,24 +74,37 @@ export function PassionAiChatPage({ userId }: PassionAiChatPageProps) {
     setInput('')
 
     try {
-      const reply = await generateAiReply({
-        promptType: 'character_making',
-        message: trimmed,
-        context: `passionId=${passionId}`,
+      const response = await continuePassionInterview({
+        passionId,
+        userMessage: trimmed,
       })
       const assistantMessage: PassionChatMessage = {
         role: 'assistant',
-        content: reply,
+        content: response.reply,
         createdAt: new Date().toISOString(),
       }
-      const nextMessages = [...nextBase, assistantMessage]
-      setMessages(nextMessages)
-      await appendPassionChatHistory(passionId, [userMessage, assistantMessage])
+      setMessages([...nextBase, assistantMessage])
     } catch {
       setErrorMessage('AI応答の取得に失敗しました。時間をおいて再試行してください。')
       setMessages(messages)
     } finally {
       setIsSending(false)
+    }
+  }
+
+  const finalizeInterview = async () => {
+    if (isFinalizing) {
+      return
+    }
+    setIsFinalizing(true)
+    setErrorMessage('')
+    try {
+      const result = await finalizePassionInterview(passionId)
+      setSubjectAttractions(result.subjectAttractions)
+    } catch {
+      setErrorMessage('偏愛魅力の抽出に失敗しました。再試行してください。')
+    } finally {
+      setIsFinalizing(false)
     }
   }
 
@@ -94,9 +132,31 @@ export function PassionAiChatPage({ userId }: PassionAiChatPageProps) {
             {message.content}
           </div>
         ))}
+
+        {subjectAttractions.length > 0 ? (
+          <div className="mt-4 rounded-2xl border border-[#f1e7dc] bg-white p-3">
+            <p className="text-xs font-bold text-[#e77300]">抽出された偏愛対象の魅力</p>
+            <ul className="mt-2 grid gap-1 text-xs text-[#494949]">
+              {subjectAttractions.map((item) => (
+                <li key={item}>・{item}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </div>
 
       <div className="screen-footer-bar border-t border-[#f1e7dc] bg-white px-3 pb-4 pt-3">
+        <div className="mb-2 flex justify-end">
+          <button
+            type="button"
+            onClick={() => void finalizeInterview()}
+            disabled={isFinalizing}
+            className="rounded-xl border border-[#f1e7dc] px-3 py-2 text-xs font-semibold text-[#e77300] disabled:opacity-70"
+          >
+            {isFinalizing ? '抽出中...' : '魅力を抽出して確定'}
+          </button>
+        </div>
+
         <div className="flex gap-2">
           <input
             className="flex-1 rounded-2xl border border-[#f1e7dc] px-4 py-3 text-sm outline-none transition focus:border-[#ff9b37] focus:ring-2 focus:ring-[#ff9b37]/20"
