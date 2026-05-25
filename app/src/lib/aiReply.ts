@@ -1,5 +1,5 @@
-import { httpsCallable } from 'firebase/functions'
-import { functions } from '../firebase/firebase'
+import { getFunctions, httpsCallable } from 'firebase/functions'
+import { app } from '../firebase/firebase'
 
 export type PromptType = 'character_making' | 'character_growing'
 
@@ -14,6 +14,7 @@ type GenerateAiReplyResponse = {
 }
 
 export async function generateAiReply(input: GenerateAiReplyRequest) {
+  const functions = getFunctions(app, 'asia-northeast1')
   const callable = httpsCallable<GenerateAiReplyRequest, GenerateAiReplyResponse>(functions, 'generateAiReply')
   const result = await callable(input)
   return result.data.reply

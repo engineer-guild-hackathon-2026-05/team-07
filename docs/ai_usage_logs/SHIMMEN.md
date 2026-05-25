@@ -201,6 +201,73 @@
 
 ---
 
+### #007 Issue #16 AI返信バックエンド（sendMessage）実装
+
+- **時刻**：18:29
+- **ツール**：Claude Code（claude-sonnet-4-6）
+- **目的**：キャラクターの `characterPrompt` と過去チャット履歴を踏まえた返答を OpenAI API 経由で生成する Cloud Functions callable を実装する
+- **プロンプト**：
+  ```
+  以下のissue #16 を実装してください。
+
+  ## やりたいこと
+  ユーザーメッセージを受け取り、キャラクターの `characterPrompt` と過去履歴を踏まえた応答を生成する。
+
+  ## なぜやるか（解きたい課題）
+  - 偏愛キャラとして自然に会話できるバックエンドを構築する
+  - キャラの口調・知識の偏りを再現する
+  - ユーザがメッセージを送信すると、それに対してAIが返信する
+
+  ## タスク
+  - `functions/src/chat/sendMessage.ts` callable を作成
+  - 入力: `characterId`, `userMessage`
+  - 処理:
+    1. caller が currentOwnerUid 一致か確認
+    2. `characters/{characterId}` を読み込み、 system prompt に `src/prompts/character_growing.json` の内容をセットする
+    3. 直近 N 件のチャット履歴を取得
+    4. OpenAI に投げて応答取得
+    5. user/assistant の2件を `chats/{chatId}.messages` に追記
+    6. (任意) 応答内容から `affinityScore` を微増、後続Issueに渡せる形に
+  - レート制限(同一ユーザーが秒間連投できないように)
+
+  ## 完了条件
+  - [ ] フロントから送信して、キャラらしい返答が返る
+  - [ ] 履歴がFirestoreに残り、ページリロードしても見える
+  ```
+  （追加指示）
+  ```
+  keyの名前は"OPENAI_API_KEY"です。.env.localは読み込まないでください。続きをお願いします。
+  ```
+  （PR作成）
+  ```
+  プルリクエストを作成してください。.github/PULL_REQUEST_TEMPLATE.mdを参考にしてください。
+  ```
+- **出力サマリ**：
+  - `functions/src/chat/sendMessage.ts` を新規作成。OpenAI Chat Completions API 呼び出し・Firestore へのメッセージ永続化・レート制限を実装
+  - `functions/src/admin.ts` に Firebase Admin 初期化を整理
+  - `app/src/lib/chatRepository.ts` を新規作成（Firestore のチャット読み書きロジックをクライアント側に配置）
+  - PR #53 作成（`feat/16_make_growing_room_ai`）
+- **評価**：一部採用
+- **採用しなかった理由**：実装完了後のテストで「メッセージがAIに送信されているか」の確認が必要な状態となり、dev へのマージは保留。ロジック自体（Functions callable 構造・Firestore 書き込み）は正しく、後続で統合予定
+
+---
+
+### #008 AI活用ログ追記（Day2 後半分）
+
+- **時刻**：23:38
+- **ツール**：Claude Code（claude-sonnet-4-6）
+- **目的**：Day 2 後半（#007 以降）の実装内容を ai_usage_logs に追記する
+- **プロンプト**：
+  ```
+  docs/ai_usage_logs/SHIMMEN.mdにclaudeの使用記録を追加したいです。
+  ログなどからその内容を時刻・プロンプト含めて追記できますか。
+  ```
+- **出力サマリ**：セッションログ（.jsonl）と git コミット履歴を照合し、#007〜#008 を本ファイルに追記。時刻・プロンプトはログから復元
+- **評価**：採用
+- **採用の理由**：セッションログから実際のプロンプトと時刻を正確に復元でき、要約なしで記録できた
+
+---
+
 ## Day 3（2026-05-26）
 
 ### #00X

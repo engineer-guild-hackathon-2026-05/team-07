@@ -4,12 +4,12 @@ type BottomNavProps = {
   firstCharacterId?: string
 }
 
-const navItems: Array<{ path: string; label: string; icon: string; match?: string }> = [
-  { path: '/', label: 'Home', icon: '⌂' },
-  { path: '/passions/new', label: '偏愛', icon: '▣' },
-  { path: '/exchange/share', label: '交換', icon: '⇄', match: '/exchange' },
-  { path: '/characters', label: '育成', icon: '✦', match: '/characters' },
-  { path: '/profile', label: 'Profile', icon: '⚙' },
+const navItems: Array<{ path: string; label: string; icon: string; ariaLabel: string; match?: string }> = [
+  { path: '/', label: 'Home', icon: '⌂', ariaLabel: 'ホーム' },
+  { path: '/passions/new', label: '偏愛', icon: '♥', ariaLabel: '偏愛を登録する' },
+  { path: '/exchange/share', label: '交換', icon: '⇄', ariaLabel: '卵を交換する', match: '/exchange' },
+  { path: '/characters', label: '育成', icon: '✦', ariaLabel: 'キャラを育てる', match: '/characters' },
+  { path: '/profile', label: 'Profile', icon: '⚙', ariaLabel: 'プロフィール' },
 ]
 
 const NAV =
@@ -42,7 +42,8 @@ export function BottomNav({ firstCharacterId }: BottomNavProps) {
               key={item.path}
               to={path}
               className={`${LINK_BASE} ${isActive ? LINK_ACTIVE : ''}`.trim()}
-              aria-label={item.label}
+              aria-label={item.ariaLabel}
+              title={item.ariaLabel}
             >
               <span
                 className={`text-2xl leading-none md:grid md:place-items-center md:w-9 md:h-9 md:rounded-xl md:text-lg ${

@@ -1,9 +1,8 @@
-import {initializeApp} from "firebase-admin/app";
-import {HttpsError, onCall} from "firebase-functions/v2/https";
+export { sendMessage } from "./chat/sendMessage.js";
+
+import { HttpsError, onCall } from "firebase-functions/v2/https";
 import characterMakingPrompt from "./prompts/character_making.json";
 import characterGrowingPrompt from "./prompts/character_growing.json";
-
-initializeApp();
 
 type PromptType = "character_making" | "character_growing";
 
@@ -15,10 +14,16 @@ type GenerateAiReplyRequest = {
 
 type OpenAIResponsesApiOutput = {
   output_text?: string;
+  error?: {
+    message?: string;
+  };
   output?: Array<{
+    type?: string;
+    refusal?: string;
     content?: Array<{
       type?: string;
       text?: string;
+      refusal?: string;
     }>;
   }>;
 };
@@ -34,6 +39,31 @@ const PROMPTS: Record<PromptType, PromptConfig> = {
   character_making: characterMakingPrompt,
   character_growing: characterGrowingPrompt,
 };
+
+/**
+ * Extracts user-displayable reply text from Responses API payload.
+ * @param {OpenAIResponsesApiOutput} json OpenAI response payload
+ * @return {string} flattened reply/refusal text for UI
+ */
+function extractReplyText(json: OpenAIResponsesApiOutput): string {
+  const fromOutputText = json.output_text?.trim();
+  if (fromOutputText) {
+    return fromOutputText;
+  }
+
+  const chunks = (json.output ?? []).flatMap((item) => {
+    const directRefusal = item.refusal?.trim();
+    const fromContent = (item.content ?? []).map((part) =>
+      (part.text ?? part.refusal ?? "").trim(),
+    );
+    return [
+      ...(directRefusal ? [directRefusal] : []),
+      ...fromContent.filter((value) => value.length > 0),
+    ];
+  });
+
+  return chunks.join("\n").trim();
+}
 
 /**
  * Calls OpenAI Responses API with prompt template and user input.
@@ -94,15 +124,14 @@ async function callOpenAi({
   }
 
   const json = await response.json() as OpenAIResponsesApiOutput;
-  const fallbackText = json.output
-    ?.flatMap((item) => item.content ?? [])
-    .filter((part) => part.type === "output_text" || part.type === "text")
-    .map((part) => part.text ?? "")
-    .join("")
-    .trim();
-  const reply = json.output_text?.trim() || fallbackText;
+  const reply = extractReplyText(json);
   if (!reply) {
-    throw new HttpsError("internal", "OpenAI API から応答を取得できませんでした。");
+    console.error("OpenAI response contained no displayable text", {
+      hasOutputText: Boolean(json.output_text),
+      outputLength: json.output?.length ?? 0,
+      hasError: Boolean(json.error?.message),
+    });
+    throw new HttpsError("internal", "AI応答の生成に失敗しました。");
   }
 
   return reply;
@@ -165,3 +194,8 @@ export const generatePassionReply = onCall(
 
 export {createUrlExchange} from "./exchange/createUrlExchange";
 export {completeExchange} from "./exchange/completeExchange";
+export {
+  startPassionInterview,
+  continuePassionInterview,
+  finalizePassionInterview,
+} from "./characterMaking/interview";

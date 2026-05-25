@@ -19,10 +19,38 @@ export async function createPassionInFirestore(input: PassionInput, ownerUid: st
     embedding: [],
     createdAt: serverTimestamp(),
     visibility: input.visibility,
+    overview: `${input.title}\n${input.description}\n${input.tags.map((tag) => `#${tag}`).join(' ')}`.trim(),
+    makingStatus: 'draft',
+    subjectAttractions: [],
     chatHistory: [],
   })
 
   return created.id
+}
+
+export async function loadPassionProfile(passionId: string): Promise<{
+  overview: string
+  subjectAttractions: string[]
+  makingStatus: 'draft' | 'interviewing' | 'finalized'
+}> {
+  const passionRef = doc(db, COLLECTIONS.PASSIONS, passionId)
+  const snap = await getDoc(passionRef)
+  if (!snap.exists()) {
+    return { overview: '', subjectAttractions: [], makingStatus: 'draft' }
+  }
+  const data = snap.data() as {
+    overview?: unknown
+    subjectAttractions?: unknown
+    makingStatus?: unknown
+  }
+  return {
+    overview: typeof data.overview === 'string' ? data.overview : '',
+    subjectAttractions: Array.isArray(data.subjectAttractions)
+      ? data.subjectAttractions.filter((v): v is string => typeof v === 'string')
+      : [],
+    makingStatus:
+      data.makingStatus === 'interviewing' || data.makingStatus === 'finalized' ? data.makingStatus : 'draft',
+  }
 }
 
 export async function appendPassionChatHistory(passionId: string, messages: PassionChatMessage[]) {
