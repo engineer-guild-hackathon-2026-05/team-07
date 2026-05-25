@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { BottomNav } from './features/components/BottomNav'
 import { useAuth } from './firebase/auth'
-import { getMyCharacters, getMyEggs, getMyPassions, loadAppData, resetDemoData } from './lib/localRepository'
+import { getMyCharacters, getMyEggs, getMyPassions, loadAppData } from './lib/localRepository'
 import { AddPassionPage } from './pages/AddPassion'
 import { CharacterDetailPage } from './pages/CharacterDetail'
 import { DevStylePage } from './pages/DevStyle'
@@ -88,11 +88,6 @@ function AppContent() {
 
   useLockBodyScroll(Boolean(user) && isAuthReady)
 
-  const resetLocalDemo = () => {
-    setData(resetDemoData())
-    navigate('/')
-  }
-
   const handleLogout = async () => {
     await signOut()
     navigate('/login', { replace: true })
@@ -133,11 +128,9 @@ function AppContent() {
               <RequireAuth user={user}>
                 <HomePage
                   user={user!}
-                  passions={passions}
                   eggs={eggs}
                   characters={characters}
-                  exchanges={exchanges}
-                  onReset={resetLocalDemo}
+                  onLogout={handleLogout}
                 />
               </RequireAuth>
             }
