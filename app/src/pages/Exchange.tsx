@@ -12,6 +12,10 @@ import {
 } from '../lib/exchangeShare'
 import { formatShortDate, getCharacterForEgg, getPassionForEgg } from '../lib/viewHelpers'
 import { receiveEggLocally } from '../lib/localRepository'
+import {
+  callCreateUrlExchange,
+  ensureEggInFirestore,
+} from '../firebase/exchange'
 import type { Character, Egg, Exchange, Passion } from '../types/models'
 
 type BarcodeDetectorConstructor = new (options?: { formats?: string[] }) => {
@@ -74,6 +78,8 @@ export function ExchangePage({
   const [customMeetingContext, setCustomMeetingContext] = useState('')
   const [shareStatus, setShareStatus] = useState('')
   const [receiveStatus, setReceiveStatus] = useState('')
+  const [isPublishing, setIsPublishing] = useState(false)
+  const [publishError, setPublishError] = useState('')
 
   const selectedEgg = eggs.find((egg) => egg.id === selectedEggId) ?? eggs[0]
   const selectedPassion = selectedEgg ? getPassionForEgg(allPassions, selectedEgg) : undefined
@@ -209,6 +215,32 @@ export function ExchangePage({
 
     window.open(lineShareUrl, '_blank', 'noopener,noreferrer')
     setShareStatus('LINEを開きました')
+  }
+
+  const handlePublishUrlExchange = async () => {
+    if (!selectedEgg || !userId) {
+      setPublishError('卵を選択してログインしてください')
+      return
+    }
+
+    setIsPublishing(true)
+    setPublishError('')
+
+    try {
+      await ensureEggInFirestore(selectedEgg, userId)
+      const { exchangeId } = await callCreateUrlExchange(selectedEgg.id)
+      navigate(`/exchange/wait/${exchangeId}`)
+    } catch (error: unknown) {
+      const code = (error as { code?: string })?.code ?? ''
+      const message = (error as { message?: string })?.message ?? '不明なエラー'
+      setPublishError(
+        code
+          ? `${code}: ${message}`
+          : `発行に失敗しました: ${message}`,
+      )
+    } finally {
+      setIsPublishing(false)
+    }
   }
 
   const handleNativeShare = async () => {
@@ -369,9 +401,22 @@ export function ExchangePage({
               </div>
 
               <div className="share-action-grid">
+                <Button
+                  type="button"
+                  onClick={handlePublishUrlExchange}
+                  disabled={isPublishing}
+                >
+                  {isPublishing ? '発行中...' : '共有URLを発行する (Firestore)'}
+                </Button>
+                {publishError ? (
+                  <p className="status-message" style={{ color: '#c0392b' }}>
+                    {publishError}
+                  </p>
+                ) : null}
+
                 <StackedActionButton
                   icon="L"
-                  title="LINEで渡す"
+                  title="LINEで渡す (ローカルデモ)"
                   description="偏愛つきメッセージをそのまま送れます"
                   variant="line"
                   onClick={handleLineShare}

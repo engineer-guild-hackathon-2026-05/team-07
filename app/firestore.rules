@@ -52,12 +52,16 @@ service cloud.firestore {
     }
 
     // ---------- eggs/{eggId} ----------
-    // 作成は Cloud Function (egg 生成) のみ
-    // 所有者変更 (currentOwnerUid) も Cloud Function (exchange) のみ
+    // 作成は本人 (sourceUser == currentOwner == auth.uid) のみ
+    //   ハッカソン MVP では Cloud Function 経由の egg 生成を待たず、
+    //   クライアントから local egg を Firestore に upsert する経路を許可する
+    // 所有者変更 (currentOwnerUid) は Cloud Function (exchange) のみ
     match /eggs/{eggId} {
       allow read: if isSignedIn()
                   && resource.data.currentOwnerUid == request.auth.uid;
-      allow create: if false;
+      allow create: if isSignedIn()
+                    && request.resource.data.sourceUserUid == request.auth.uid
+                    && request.resource.data.currentOwnerUid == request.auth.uid;
       allow update: if isSignedIn()
                     && resource.data.currentOwnerUid == request.auth.uid
                     && isUnchanged('currentOwnerUid')

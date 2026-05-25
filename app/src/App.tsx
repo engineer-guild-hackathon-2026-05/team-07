@@ -9,6 +9,8 @@ import { AddPassionPage } from './pages/AddPassion'
 import { CharacterDetailPage } from './pages/CharacterDetail'
 import { DevStylePage } from './pages/DevStyle'
 import { ExchangePage } from './pages/Exchange'
+import { ExchangeReceiveByIdPage } from './pages/ExchangeReceiveById'
+import { ExchangeWaitPage } from './pages/ExchangeWait'
 import { HomePage } from './pages/Home'
 import { LoginPage } from './pages/Login'
 import { PassionAiChatPage } from './pages/PassionAiChat'
@@ -174,6 +176,22 @@ function AppContent() {
                   userId={currentUid}
                   userName={user?.name ?? 'guest'}
                 />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/exchange/wait/:exchangeId"
+            element={
+              <RequireAuth user={user}>
+                <ExchangeWaitPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/exchange/receive/:exchangeId"
+            element={
+              <RequireAuth user={user}>
+                <ExchangeReceiveByIdPage isAuthenticated={Boolean(user)} />
               </RequireAuth>
             }
           />
