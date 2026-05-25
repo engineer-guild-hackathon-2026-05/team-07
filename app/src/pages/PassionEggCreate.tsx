@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { createEggFromPassion } from '../lib/eggRepository'
 import { appendEggToLocalData } from '../lib/localRepository'
+import { buildLineShareUrl } from '../lib/exchangeShare'
+import { buildReceiveUrlForExchange, callCreateUrlExchange } from '../firebase/exchange'
 import type { AppData } from '../types/models'
 
 type PassionEggCreatePageProps = {
@@ -11,6 +13,7 @@ type PassionEggCreatePageProps = {
 }
 
 type CreatePhase = 'idle' | 'creating' | 'done' | 'error'
+type SharePhase = 'idle' | 'issuing' | 'error'
 
 export function PassionEggCreatePage({
   userId,
@@ -21,6 +24,8 @@ export function PassionEggCreatePage({
   const [phase, setPhase] = useState<CreatePhase>('idle')
   const [eggId, setEggId] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
+  const [sharePhase, setSharePhase] = useState<SharePhase>('idle')
+  const [shareErrorMessage, setShareErrorMessage] = useState('')
 
   if (!userId) {
     return <Navigate to="/login" replace />
@@ -64,6 +69,27 @@ export function PassionEggCreatePage({
     }
   }
 
+  const handleShareViaLine = async () => {
+    if (!eggId || sharePhase === 'issuing') {
+      return
+    }
+
+    setSharePhase('issuing')
+    setShareErrorMessage('')
+
+    try {
+      const { exchangeId } = await callCreateUrlExchange(eggId)
+      const receiveUrl = buildReceiveUrlForExchange(exchangeId)
+      const shareText = `偏愛から生まれた卵を渡します🥚\n受け取る → ${receiveUrl}`
+      const lineUrl = buildLineShareUrl(shareText)
+      window.open(lineUrl, '_blank', 'noopener,noreferrer')
+      setSharePhase('idle')
+    } catch {
+      setSharePhase('error')
+      setShareErrorMessage('共有URLの発行に失敗しました。時間をおいて再試行してください。')
+    }
+  }
+
   return (
     <div className="screen !p-0 flex h-full flex-col bg-[#fffdfb]">
       <style>{`\n        @keyframes egg-pulse {\n          0%, 100% { transform: scale(1); }\n          50% { transform: scale(1.06); }\n        }\n        @keyframes egg-pop {\n          0% { transform: scale(0.92); }\n          70% { transform: scale(1.12); }\n          100% { transform: scale(1); }\n        }\n      `}</style>
@@ -100,6 +126,22 @@ export function PassionEggCreatePage({
         >
           {isCreating ? '卵を生成中...' : isDone ? '生成完了' : '卵を作成する'}
         </button>
+
+        {isDone ? (
+          <>
+            <button
+              type="button"
+              onClick={() => void handleShareViaLine()}
+              disabled={sharePhase === 'issuing'}
+              className="mt-3 w-full rounded-2xl bg-[#06c755] px-4 py-3 text-sm font-bold text-white disabled:opacity-70"
+            >
+              {sharePhase === 'issuing' ? '共有URLを発行中...' : 'LINEで共有'}
+            </button>
+            {sharePhase === 'error' ? (
+              <p className="mt-2 text-xs font-semibold text-[#c2410c]">{shareErrorMessage}</p>
+            ) : null}
+          </>
+        ) : null}
 
         <div className="mt-3 flex justify-end">
           <Link to="/" className="text-xs font-semibold text-[#e77300] underline-offset-2 hover:underline">
