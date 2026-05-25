@@ -102,6 +102,12 @@ export interface PassionDoc {
   createdAt: DateLike;
   /** Visibility scope */
   visibility: "public" | "friends" | "private";
+  /** Conversation history for deep-dive chat (issue #6 temporary design) */
+  chatHistory?: Array<{
+    role: "user" | "assistant";
+    content: string;
+    createdAt: string;
+  }>;
 }
 
 /** eggs/{eggId} */

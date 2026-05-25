@@ -1,19 +1,15 @@
-/**
- * Import function triggers from their respective submodules:
- *
- * import {onCall} from "firebase-functions/v2/https";
- * import {onDocumentWritten} from "firebase-functions/v2/firestore";
- *
- * See a full list of supported triggers at https://firebase.google.com/docs/functions
- */
+import { onCall } from 'firebase-functions/v2/https'
 
-// import {onRequest} from "firebase-functions/v2/https";
-// import * as logger from "firebase-functions/logger";
+type GeneratePassionReplyRequest = {
+  passionId: string
+  message: string
+}
 
-// Start writing functions
-// https://firebase.google.com/docs/functions/typescript
+export const generatePassionReply = onCall<GeneratePassionReplyRequest>((request) => {
+  const message = request.data?.message?.trim() ?? ''
+  const short = message.length > 40 ? `${message.slice(0, 40)}...` : message
 
-// export const helloWorld = onRequest((request, response) => {
-//   logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
+  return {
+    reply: `「${short || 'その話'}」いいですね。いつからそれが好きになりましたか？`,
+  }
+})

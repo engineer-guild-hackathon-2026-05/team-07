@@ -12,8 +12,11 @@ export function AddPassionPage({ userId }: AddPassionPageProps) {
   const { submitPassion } = useAddPassion(userId)
 
   const handleSubmit = async (input: PassionInput) => {
-    await submitPassion(input)
-    navigate('/')
+    const passionId = await submitPassion(input)
+    if (!passionId) {
+      return
+    }
+    navigate(`/passions/${passionId}/aichat`)
   }
 
   return (
