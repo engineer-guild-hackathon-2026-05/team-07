@@ -276,10 +276,72 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：Issue #50 の深掘り導線に必要な機能を一式実装できたため。
 
+### #006 セキュリティ指摘への是正対応
+
+- **時刻**：14:10
+- **ツール**：Codex (GPT-5)
+- **目的**：セキュリティレビュー指摘（認証必須化・情報露出抑制・ルール強化）を修正
+- **プロンプト**：
+  ```
+  修正してください
+  ```
+- **出力サマリ**：`generateAiReply` / `generatePassionReply` に認証必須チェックを追加。OpenAIエラー詳細をクライアントへ返さないよう変更し、詳細はFunctionsログへ出力。`passions` の Firestore Rules に許可フィールドと型/件数制約を追加。`chatHistory` 更新を `runTransaction` 化して競合耐性を強化。`app` / `functions` ビルド成功確認。
+- **評価**：採用
+- **採用 / 不採用の理由**：高優先の課金悪用リスクと情報露出リスクを先に潰し、データ整合性も向上できたため。
+
 ---
 
 ## Day 3（2026-05-26）
 
-### #00X
+### #001 セキュリティ調査
+
+- **時刻**：14:30
+- **ツール**：GitHub Copilot
+- **目的**：アプリ全体のセキュリティ設計と実装状況を確認する
+- **プロンプト**：
+  ```
+  このアプリケーションのセキュリティを調査してください。
+  usage log wakamiya.mdの中に、もともと入っている文章のフォーマットに倣って情報を追加してください。あなたの名前も書いてください
+  ```
+- **出力サマリ**：
+  - `app/firestore.rules` は認証必須を前提とし、`users` / `passions` / `chats` を本人判定、`eggs` / `characters` / `exchanges` は作成・更新を Cloud Functions のみ許可する設計。クライアントからの不正な `create` / `delete` を原則拒否している。
+  - `app/src/firebase/auth.ts` では Google / 匿名 /デモログインを提供し、Firebase Auth で認証したユーザーのみ `users/{uid}` を作成・更新する構造。`useAuth` では `ensureUserDocument` による Firestore 書き込みもあり、Firestore ルールとの整合性が重要。
+  - `app/functions/src/index.ts` の OpenAI 呼び出しは `process.env.OPENAI_API_KEY` を参照し、秘密鍵を Cloud Functions 実行環境に閉じる実装。クライアント側に API キーが流出しない点は良好。
+  - ただし `firebaseConfig` が `app/src/firebase/firebase.ts` にベタ書きされており、Firebase プロジェクトIDなどは公開クライアント設定として扱われるため、機密情報は `.env` に分離する運用が望ましい。
+- **評価**：不採用
+- **採用 / 不採用の理由**：
+ログの追記のみでセキュリティに関する出力がなかった。
+
+---
+
+### #002 functions/.env のGit管理除外
+
+- **時刻**：14:40
+- **ツール**：Codex (GPT-5)
+- **目的**：`functions/.env` を誤ってコミットしないようにする
+- **プロンプト**：
+  ```
+  functions .envをgit ignore
+  ```
+- **出力サマリ**：`app/functions/.gitignore` に `.env` と `.env.*` を追加し、Functions用環境変数ファイルをGit管理対象外に設定。
+- **評価**：採用
+- **採用 / 不採用の理由**：APIキーなど機微情報の漏洩リスクを下げる基本対策のため。
+
+---
+
+### #003 Functions deploy失敗（lint）への対処
+
+- **時刻**：14:55
+- **ツール**：Codex (GPT-5)
+- **目的**：`firebase deploy --only functions` の predeploy lint エラーを解消
+- **プロンプト**：
+  ```
+  firebase deploy --only functions
+  ...
+  Invalid option '--ext' ... You're using eslint.config.js ...
+  ```
+- **出力サマリ**：`functions/package.json` の lint スクリプトを `ESLINT_USE_FLAT_CONFIG=false` 付きに修正し、さらに `functions/src/index.ts` と `functions/src/types/firestore.ts` の lint違反（JSDoc/spacing）を修正。`npm --prefix functions run lint` で成功確認。
+- **評価**：採用
+- **採用 / 不採用の理由**：デプロイ前チェックが通る状態を再現できたため。
 
 ---
