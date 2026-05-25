@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Card } from '../components/ui'
 import { AddPassionForm, useAddPassion } from '../features/charcter_making'
 import type { PassionInput } from '../types/models'
 
@@ -28,13 +27,7 @@ export function AddPassionPage({ userId }: AddPassionPageProps) {
   }
 
   return (
-    <div className="screen screen-form">
-      <Card className="add-intro">
-        <p className="eyebrow">char-01</p>
-        <h1>偏愛をことばにする</h1>
-        <p>好きなポイントを入力すると、ローカルの仮ロジックで卵とキャラを生成します。</p>
-      </Card>
-
+    <div className="screen !p-0" style={{ background: 'var(--paper)' }}>
       <AddPassionForm onSubmit={handleSubmit} errorMessage={errorMessage} />
     </div>
   )
