@@ -29,6 +29,11 @@
   background: rgba(255, 155, 55, 0.35);
 }
 
+.screen-form {
+  display: grid;
+  gap: 16px;
+}
+
 .login-screen {
   position: relative;
   display: grid;
@@ -1685,6 +1690,18 @@
 
   .button-sample-row {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .screen-form {
+    width: min(100%, 640px);
+    margin-inline: auto;
+  }
+
+  .screen-form .add-intro,
+  .screen-form .form-panel {
+    max-width: none;
+    margin-inline: 0;
+    width: 100%;
   }
 
   .form-panel {
