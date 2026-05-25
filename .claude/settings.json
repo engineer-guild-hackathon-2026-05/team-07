@@ -1,0 +1,25 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Read|Edit|Write|MultiEdit|NotebookEdit|Glob|Grep|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/restrict-to-project.sh\""
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "additionalDirectories": [],
+    "deny": [
+      "WebFetch",
+      "WebSearch"
+    ]
+  },
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  }
+}

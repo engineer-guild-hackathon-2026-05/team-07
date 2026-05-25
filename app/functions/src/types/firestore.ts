@@ -57,12 +57,17 @@ export type SubcollectionName =
 /**
  * A character document shares its ID with the egg it hatched from
  * (1 egg ↔ 1 character). Use this helper to keep both sides in sync.
+ * @param {string} eggId Source egg id.
+ * @return {string} The corresponding character id (same value).
  */
 export const characterIdFromEggId = (eggId: string): string => eggId;
 
 /**
  * A chat between a character and a user has a deterministic ID so the
  * document can be fetched directly without a where-query.
+ * @param {string} characterId The character id.
+ * @param {string} userUid The user uid.
+ * @return {string} Deterministic chat id.
  */
 export const chatIdFor = (characterId: string, userUid: string): string =>
   `${characterId}_${userUid}`;
@@ -153,24 +158,38 @@ export interface CharacterDoc {
   updatedAt: DateLike;
 }
 
+/** Lifecycle status of an exchange. */
+export type ExchangeStatus = "pending" | "completed" | "expired";
+
+/** How the exchange was initiated. */
+export type ExchangeShareMethod = "qr" | "url";
+
 /** exchanges/{exchangeId} */
 export interface ExchangeDoc {
   /** UID of the user who gave the egg */
   fromUid: string;
-  /** UID of the user who received the egg */
+  /** UID of the recipient. Empty string while status === 'pending'. */
   toUid: string;
   /** Denormalised display name of the giver */
   fromUserName: string;
-  /** Denormalised display name of the receiver */
+  /** Recipient display name. Empty string while status === 'pending'. */
   toUserName: string;
   /** ID of the exchanged egg */
   eggId: string;
   /** Denormalised display name of the egg/character */
   eggName: string;
-  /** Exchange time */
+  /** Doc creation time (pending). Always set. */
   createdAt: DateLike;
+  /** Transition-to-'completed' time. Empty string while pending. */
+  completedAt: DateLike;
   /** Context of the meeting (event name, location, etc.) */
   meetingContext: string;
+  /** Lifecycle status: pending on create, completed on hand-off. */
+  status: ExchangeStatus;
+  /** Share token expiry (URL exchanges; 24h after creation). */
+  expiresAt: DateLike;
+  /** Channel that initiated this exchange. */
+  shareMethod: ExchangeShareMethod;
 }
 
 /**

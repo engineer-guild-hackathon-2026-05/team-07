@@ -160,24 +160,38 @@ export interface CharacterDoc {
   updatedAt: DateLike;
 }
 
+/** Lifecycle status of an exchange. */
+export type ExchangeStatus = "pending" | "completed" | "expired";
+
+/** How the exchange was initiated. */
+export type ExchangeShareMethod = "qr" | "url";
+
 /** exchanges/{exchangeId} */
 export interface ExchangeDoc {
   /** UID of the user who gave the egg */
   fromUid: string;
-  /** UID of the user who received the egg */
+  /** UID of the user who received the egg. Empty string while status === 'pending'. */
   toUid: string;
   /** Denormalised display name of the giver */
   fromUserName: string;
-  /** Denormalised display name of the receiver */
+  /** Denormalised display name of the receiver. Empty string while status === 'pending'. */
   toUserName: string;
   /** ID of the exchanged egg */
   eggId: string;
   /** Denormalised display name of the egg/character */
   eggName: string;
-  /** Exchange time */
+  /** When this exchange doc was created (pending). Always set. */
   createdAt: DateLike;
+  /** When the exchange transitioned to 'completed'. Empty string while pending. */
+  completedAt: DateLike;
   /** Context of the meeting (event name, location, etc.) */
   meetingContext: string;
+  /** Lifecycle status. 'pending' on creation; 'completed' once handed off. */
+  status: ExchangeStatus;
+  /** When the share token stops being valid (URL exchanges; 24h after creation). */
+  expiresAt: DateLike;
+  /** Channel that initiated this exchange. */
+  shareMethod: ExchangeShareMethod;
 }
 
 /**
