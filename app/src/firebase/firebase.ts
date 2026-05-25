@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth"
 import { getFirestore } from "firebase/firestore";
+import { getFunctions } from "firebase/functions";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDFJFMY7-0_qvoQFcPW9A9-1AXys4PG5mg",
@@ -11,6 +12,7 @@ const firebaseConfig = {
   appId: "1:213567420882:web:b6a285878e56a7cbcd700b"
 };
 
-const app = initializeApp(firebaseConfig);
+export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const functions = getFunctions(app, "asia-northeast1");

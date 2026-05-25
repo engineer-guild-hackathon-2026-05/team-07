@@ -5,6 +5,10 @@
  * Both use a structural FirestoreTimestamp interface that is satisfied by
  * firebase-admin/firestore Timestamp without a direct import, so Functions
  * can stay in the admin SDK domain while sharing the same type shapes.
+ *
+ * Refer to docs/requirements/firestore-schema-refinement.md for the
+ * design rationale (deterministic IDs, denormalized display fields,
+ * messages-as-subcollection, etc.).
  */
 
 // ---------------------------------------------------------------------------
@@ -37,6 +41,39 @@ export const COLLECTIONS = {
 
 export type CollectionName = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];
 
+/** Subcollection names (nested under a parent document). */
+export const SUBCOLLECTIONS = {
+  /** chats/{chatId}/messages/{messageId} */
+  CHAT_MESSAGES: "messages",
+  /** passions/{passionId}/makingMessages/{messageId} */
+  PASSION_MAKING_MESSAGES: "makingMessages",
+} as const;
+
+export type SubcollectionName =
+  (typeof SUBCOLLECTIONS)[keyof typeof SUBCOLLECTIONS];
+
+// ---------------------------------------------------------------------------
+// Deterministic ID helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * A character document shares its ID with the egg it hatched from
+ * (1 egg ↔ 1 character). Use this helper to keep both sides in sync.
+ * @param {string} eggId Source egg id.
+ * @return {string} The corresponding character id (same value).
+ */
+export const characterIdFromEggId = (eggId: string): string => eggId;
+
+/**
+ * A chat between a character and a user has a deterministic ID so the
+ * document can be fetched directly without a where-query.
+ * @param {string} characterId The character id.
+ * @param {string} userUid The user uid.
+ * @return {string} Deterministic chat id.
+ */
+export const chatIdFor = (characterId: string, userUid: string): string =>
+  `${characterId}_${userUid}`;
+
 // ---------------------------------------------------------------------------
 // Document types
 // ---------------------------------------------------------------------------
@@ -49,6 +86,8 @@ export interface UserDoc {
   iconUrl: string;
   /** Account creation time */
   createdAt: DateLike;
+  /** Last profile update time */
+  updatedAt: DateLike;
   /** Tags the user is interested in */
   favoriteTags: string[];
 }
@@ -68,29 +107,47 @@ export interface PassionDoc {
   /** Creation time */
   createdAt: DateLike;
   /** Visibility scope */
-  visibility: "public" | "private";
+  visibility: "public" | "friends" | "private";
+  /** Input summary normalized for AI interview prompt */
+  overview?: string;
+  /** Interview lifecycle */
+  makingStatus?: "draft" | "interviewing" | "finalized";
+  /** Extracted unique attractions of the passion subject */
+  subjectAttractions?: string[];
 }
 
 /** eggs/{eggId} */
 export interface EggDoc {
   /** UID of the user whose passion generated this egg */
   sourceUserUid: string;
+  /** Display-time denormalised copy of the source user's name */
+  sourceUserName: string;
   /** IDs of the passions that shaped this egg */
   basedOnPassionIds: string[];
   /** System prompt used to generate the character */
   characterPrompt: string;
   /** Hatch progress (e.g. 0–100) */
   hatchLevel: number;
+  /** Whether this egg has already hatched into a character */
+  hatched: boolean;
   /** Creation time */
   createdAt: DateLike;
   /** UID of the user currently holding the egg */
   currentOwnerUid: string;
 }
 
-/** characters/{characterId} */
+/**
+ * characters/{characterId}
+ *
+ * `characterId` is intentionally equal to the originating egg's id
+ * (`characterIdFromEggId`). The bidirectional link can be navigated
+ * without an extra query.
+ */
 export interface CharacterDoc {
-  /** ID of the egg this character hatched from */
+  /** ID of the egg this character hatched from (== characterId) */
   eggId: string;
+  /** UID of the user who currently owns this character */
+  ownerUid: string;
   /** Character name */
   name: string;
   /** Personality description */
@@ -103,23 +160,59 @@ export interface CharacterDoc {
   affinityScore: number;
   /** Topics unlocked through accumulated conversation */
   unlockedTopics: string[];
+  /** Condensed passion memory injected into growing chat */
+  passionMemory?: {
+    overview: string;
+    attractions: string[];
+  };
+  /** Creation time */
+  createdAt: DateLike;
+  /** Last interaction / growth update time */
+  updatedAt: DateLike;
 }
+
+/** Lifecycle status of an exchange. */
+export type ExchangeStatus = "pending" | "completed" | "expired";
+
+/** How the exchange was initiated. */
+export type ExchangeShareMethod = "qr" | "url";
 
 /** exchanges/{exchangeId} */
 export interface ExchangeDoc {
   /** UID of the user who gave the egg */
   fromUid: string;
-  /** UID of the user who received the egg */
+  /** UID of the recipient. Empty string while status === 'pending'. */
   toUid: string;
+  /** Denormalised display name of the giver */
+  fromUserName: string;
+  /** Recipient display name. Empty string while status === 'pending'. */
+  toUserName: string;
   /** ID of the exchanged egg */
   eggId: string;
-  /** Exchange time */
+  /** Denormalised display name of the egg/character */
+  eggName: string;
+  /** Doc creation time (pending). Always set. */
   createdAt: DateLike;
+  /** Transition-to-'completed' time. Empty string while pending. */
+  completedAt: DateLike;
   /** Context of the meeting (event name, location, etc.) */
   meetingContext: string;
+  /** Lifecycle status: pending on create, completed on hand-off. */
+  status: ExchangeStatus;
+  /** Share token expiry (URL exchanges; 24h after creation). */
+  expiresAt: DateLike;
+  /** Channel that initiated this exchange. */
+  shareMethod: ExchangeShareMethod;
 }
 
-/** Single message entry stored inside ChatDoc.messages */
+/**
+ * chats/{chatId}/messages/{messageId}
+ *
+ * Stored as a subcollection (not as an array on ChatDoc) so that:
+ *   - appending a message costs a single addDoc
+ *   - the latest N messages can be read with limit(N)
+ *   - the 1MB document size cap doesn't apply
+ */
 export interface ChatMessageDoc {
   /** Message author */
   role: "user" | "character";
@@ -127,16 +220,32 @@ export interface ChatMessageDoc {
   content: string;
   /** Message send time */
   createdAt: DateLike;
+  /** Optional growth score for this user message */
+  score?: number;
+  /** Why the message got this score */
+  scoreReason?: string;
 }
 
-/** chats/{chatId} */
+/** passions/{passionId}/makingMessages/{messageId} */
+export interface PassionMakingMessageDoc {
+  role: "user" | "assistant";
+  content: string;
+  createdAt: DateLike;
+}
+
+/**
+ * chats/{chatId}
+ *
+ * `chatId` is the deterministic `${characterId}_${userUid}` (see `chatIdFor`).
+ * Individual messages live in the `messages` subcollection.
+ */
 export interface ChatDoc {
   /** ID of the character participating in this chat */
   characterId: string;
   /** UID of the human user */
   userUid: string;
-  /** Ordered message history */
-  messages: ChatMessageDoc[];
+  /** Preview snippet of the most recent message (denormalised) */
+  lastMessagePreview: string;
   /** Time of the most recent message */
   updatedAt: DateLike;
 }

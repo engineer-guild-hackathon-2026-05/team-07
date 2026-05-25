@@ -2,16 +2,27 @@ import { useState } from 'react'
 import { Button } from './Button'
 
 type TagInputProps = {
-  tags: string[]
+  helperText?: string
+  label?: string
+  maxTags?: number
   onChange: (tags: string[]) => void
+  placeholder?: string
+  tags: string[]
 }
 
-export function TagInput({ tags, onChange }: TagInputProps) {
+export function TagInput({
+  helperText,
+  label = 'タグ',
+  maxTags = 5,
+  onChange,
+  placeholder = '例: ラジオ',
+  tags,
+}: TagInputProps) {
   const [value, setValue] = useState('')
 
   const addTag = () => {
     const nextTag = value.trim().replace(/^#/, '')
-    if (!nextTag || tags.includes(nextTag) || tags.length >= 5) {
+    if (!nextTag || tags.includes(nextTag) || tags.length >= maxTags) {
       setValue('')
       return
     }
@@ -22,7 +33,7 @@ export function TagInput({ tags, onChange }: TagInputProps) {
 
   return (
     <div className="field">
-      <span>タグ</span>
+      <span>{label}</span>
       <div className="tag-input-row">
         <input
           value={value}
@@ -33,7 +44,7 @@ export function TagInput({ tags, onChange }: TagInputProps) {
               addTag()
             }
           }}
-          placeholder="例: ラジオ"
+          placeholder={placeholder}
         />
         <Button type="button" variant="secondary" onClick={addTag}>
           追加
@@ -52,7 +63,7 @@ export function TagInput({ tags, onChange }: TagInputProps) {
             </button>
           ))
         ) : (
-          <small>最大5個まで。タップで削除できます。</small>
+          <small>{helperText ?? `最大${maxTags}個まで。タップで削除できます。`}</small>
         )}
       </div>
     </div>

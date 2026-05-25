@@ -1,4 +1,56 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #ff9b37;
+  --color-primary-strong: #e77300;
+  --color-accent: #4edbfb;
+  --color-surface: #fffdfb;
+  --color-page: #f3f3f3;
+  --color-border: #f1e7dc;
+  --color-text: #494949;
+  --color-text-heading: #1f1f1f;
+
+  --font-sans: 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', 'Yu Gothic', 'Segoe UI', sans-serif;
+
+  --text-xs: 12px;
+  --text-xs--line-height: 1.4;
+  --text-sm: 13px;
+  --text-sm--line-height: 1.45;
+  --text-base: 16px;
+  --text-base--line-height: 1.55;
+  --text-lg: 18px;
+  --text-lg--line-height: 1.45;
+  --text-xl: 22px;
+  --text-xl--line-height: 1.25;
+  --text-2xl: 30px;
+  --text-2xl--line-height: 1.18;
+  --text-3xl: 34px;
+  --text-3xl--line-height: 1.08;
+
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-7: 28px;
+  --spacing-8: 32px;
+
+  --radius-sm: 14px;
+  --radius-md: 18px;
+  --radius-lg: 28px;
+  --radius-xl: 34px;
+
+  --shadow-soft: 0 14px 36px rgba(73, 73, 73, 0.08);
+  --shadow-card: 0 18px 44px rgba(73, 73, 73, 0.1);
+  --shadow-floating: 0 24px 70px rgba(73, 73, 73, 0.18);
+}
+
 :root {
+  --primary: #ff9b37;
+  --primary-strong: #e77300;
+  --accent: #4edbfb;
+  --text-heading: #1f1f1f;
   --orange: #ff9b37;
   --orange-dark: #e77300;
   --mint: #4edbfb;
@@ -7,7 +59,17 @@
   --surface: #fffdfb;
   --page-bg: #f3f3f3;
   --border: #f1e7dc;
+  --radius-sm: 14px;
+  --radius-md: 18px;
+  --radius-lg: 28px;
   --shadow: 0 18px 44px rgba(73, 73, 73, 0.1);
+  --shadow-soft: 0 14px 36px rgba(73, 73, 73, 0.08);
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
   --sans: 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', 'Yu Gothic', 'Segoe UI', sans-serif;
 
   font: 16px/1.55 var(--sans);
@@ -19,28 +81,34 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-* {
-  box-sizing: border-box;
-}
+@layer base {
+  * {
+    @apply box-border;
+  }
 
-body {
-  margin: 0;
-}
+  body {
+    @apply m-0;
+  }
 
-button,
-input,
-textarea,
-select {
-  font: inherit;
-}
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
 
-h1,
-h2,
-h3,
-p {
-  margin: 0;
-}
+  a {
+    @apply text-inherit no-underline;
+  }
 
-#root {
-  min-height: 100svh;
+  h1,
+  h2,
+  h3,
+  p {
+    @apply m-0;
+  }
+
+  #root {
+    @apply min-h-svh;
+  }
 }
