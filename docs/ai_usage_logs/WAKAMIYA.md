@@ -345,3 +345,64 @@
 - **採用 / 不採用の理由**：デプロイ前チェックが通る状態を再現できたため。
 
 ---
+
+### #004 AIチャット internal 調査のためのエラー可視化
+
+- **時刻**：16:30
+- **ツール**：Codex (GPT-5)
+- **目的**：`internal` エラー原因をフロントで即時判別できるようにする
+- **プロンプト**：
+  ```
+  変えて
+  mdも忘れずにねー
+  ```
+- **出力サマリ**：`app/src/pages/PassionAiChat.tsx` の `catch` を変更し、`console.error(error)` と `error.message` を画面表示するように修正。Functions 側が返す `unauthenticated` / `failed-precondition` / `internal` などの差分をクライアントで直接確認できる状態にした。
+- **評価**：採用
+- **採用 / 不採用の理由**：Network/Functionsログだけで切り分けが進まない状況で、デバッグ速度を上げる実用的な改善になったため。
+
+---
+
+### #005 Functions Emulator 接続の導入
+
+- **時刻**：16:55
+- **ツール**：Codex (GPT-5)
+- **目的**：本番デプロイ前にローカルで callable function を検証できるようにする
+- **プロンプト**：
+  ```
+  エミュレーター繋いで欲しい
+  ```
+- **出力サマリ**：`src/firebase/firebase.ts` で `functions` を `asia-northeast1` 固定生成し、`import.meta.env.DEV` 時に `connectFunctionsEmulator(functions, "127.0.0.1", 5001)` を適用。`src/lib/aiReply.ts` と `src/lib/passionAi.ts` は個別 `getFunctions` を廃止して共通 `functions` インスタンスを参照するよう統一。
+- **評価**：採用
+- **採用 / 不採用の理由**：開発時の通信先が明示され、internalエラーの再現と切り分けをローカルで安全に実施できるため。
+
+---
+
+### #006 OpenAIレスポンス解析の補強
+
+- **時刻**：17:10
+- **ツール**：Codex (GPT-5)
+- **目的**：`OpenAI API から応答を取得できませんでした。` エラーの解消
+- **プロンプト**：
+  ```
+  PassionAiChat.tsx:66 FirebaseError: OpenAI API から応答を取得できませんでした。
+  ```
+- **出力サマリ**：`functions/src/index.ts` のレスポンス解析を修正し、`output_text` だけでなく `output[].content[].text` からも返答を抽出するように変更。空応答判定の取りこぼしを防止。
+- **評価**：採用
+- **採用 / 不採用の理由**：OpenAI Responses API の返却形式差分に対応でき、internalエラーの再発防止につながるため。
+
+---
+
+### #007 本番向けエラーメッセージ表示へ復元
+
+- **時刻**：17:20
+- **ツール**：Codex (GPT-5)
+- **目的**：デバッグ用の詳細エラー露出をやめ、本番向けUIに戻す
+- **プロンプト**：
+  ```
+  じゃあ、本番環境用に戻して
+  ```
+- **出力サマリ**：`app/src/pages/PassionAiChat.tsx` の `catch` を復元し、`console.error` と `error.message` の直接表示を廃止。ユーザー向けには固定文言（再試行案内）のみ表示する実装に戻した。
+- **評価**：採用
+- **採用 / 不採用の理由**：内部エラー情報の露出を防ぎ、UXとセキュリティのバランスを本番運用向けに戻せたため。
+
+---
