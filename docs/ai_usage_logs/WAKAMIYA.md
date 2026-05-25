@@ -407,6 +407,81 @@
 
 ---
 
+### #008 リポジトリ全体の実装棚卸し（.env除外）
+
+- **時刻**：18:10
+- **ツール**：Codex (GPT-5)
+- **目的**：`.env` 系を除く全ファイルを読み、`src` / `functions` を中心に実装責務を明文化する
+- **プロンプト**：
+  ```
+  このリポジトリの.env系以外の全てのファイルを読み、主にsrc,functions/などの内部に実装されている内容を明文化して下さい。
+  各ファイルがどのような実装でどういった役割を果たしているかを全て洗い出してください。
+  また、この会話は既存のフォーマットに従いUSAGE WAKAMIYA.mdに記入してください
+  ```
+- **出力サマリ**：
+  - `.env` 系を除外した全ファイルの棚卸しを実施し、`app/src` / `app/functions/src` を中心に実装責務を確認した。
+  - 棚卸し結果の詳細は Markdown には展開せず、この会話上で共有する方針に変更した。
+- **評価**：採用
+- **採用 / 不採用の理由**：会話ログとして必要十分な粒度（実施事実と方針変更）に揃えられたため。
+
+---
+
+### #009 AGENTS準拠で偏愛インタビュー/採点設計を具体化
+
+- **時刻**：20:10
+- **ツール**：Codex (GPT-5)
+- **目的**：`AGENTS.md` のスキーマ前提で、偏愛入力→抽出→育成採点の実装方針を確定する
+- **プロンプト**：
+  ```
+  agents.mdの中にデータ構造が入ってるんだけど、それをまず閲覧して欲しい。...
+  この構造に最適なfunctionsやfeatures/char-makingの中身にリファクタリングしてください。
+  どのような変更が適切かを先に詳しく説明して下さい
+  ```
+- **出力サマリ**：`passions` への `overview` / `makingStatus` / `subjectAttractions` 追加、`makingMessages` サブコレクション化、Functions の `start/continue/finalize` 分割、`sendMessage` で偏愛メモリ注入+採点保存の設計を提示。
+- **評価**：採用
+- **採用 / 不採用の理由**：データ構造と機能責務が一致し、後続実装へ直結する設計だったため。
+
+---
+
+### #010 偏愛インタビュー導線と育成採点の実装
+
+- **時刻**：20:30
+- **ツール**：Codex (GPT-5)
+- **目的**：提案設計を `functions` / `charcter_making` / 育成チャットへ実装する
+- **プロンプト**：
+  ```
+  実装してください
+  ```
+- **出力サマリ**：
+  - `app/functions/src/characterMaking/interview.ts` を新規追加し、`startPassionInterview` / `continuePassionInterview` / `finalizePassionInterview` を実装。
+  - `app/functions/src/chat/sendMessage.ts` を改修し、`character.passionMemory` 注入・メッセージ採点 (`score`, `scoreReason`) 保存・`affinityScore` 連動更新を追加。
+  - `app/src/lib/passionInterview.ts` を追加し、フロントから interview callable を利用可能にした。
+  - `app/src/pages/PassionAiChat.tsx` を新フローへ差し替え、魅力抽出確定ボタンを実装。
+  - 型定義・ルール (`app/src/types/firestore.ts`, `app/functions/src/types/firestore.ts`, `app/firestore.rules`) を拡張。
+- **評価**：採用
+- **採用 / 不採用の理由**：3要件（概要投入・魅力抽出保存・育成時採点）を一貫実装できたため。
+
+---
+
+### #011 タスク単位コミットへの再構成
+
+- **時刻**：20:45
+- **ツール**：Codex (GPT-5)
+- **目的**：1コミットにまとまった変更をタスクごとに分割し、履歴を読みやすくする
+- **プロンプト**：
+  ```
+  タスクごとに分割してコミットして欲しい。後、全部の記録をusageのmdに
+  ```
+- **出力サマリ**：直近コミットを分解し、以下4コミットへ再構成。
+  - `57d22e2 feat: extend passion schema for interview and scoring`
+  - `30f4bda feat: add character-making interview callable functions`
+  - `10f619e feat: wire passion interview flow in frontend`
+  - `79555c4 feat: add growth scoring in sendMessage`
+- **評価**：採用
+- **採用 / 不採用の理由**：変更意図とレビュー単位が明確になり、差分追跡しやすくなったため。
+
+---
+
 ### #008 OpenAIレスポンス抽出ロジックの再強化
 
 - **時刻**：17:35
