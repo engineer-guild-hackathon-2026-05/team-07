@@ -14,18 +14,10 @@ import type {
 } from "../types/firestore.js";
 import characterGrowingPrompt from "../prompts/character_growing.json";
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
 const OPENAI_API_URL = "https://api.openai.com/v1/responses";
 const DEFAULT_MODEL = "gpt-4.1-mini";
 const HISTORY_LIMIT = 10;
 const RATE_LIMIT_MS = 2000;
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
 
 type SendMessageRequest = {
   characterId: string;
@@ -41,14 +33,30 @@ type OpenAIMessage = {
   content: string;
 };
 
-// ---------------------------------------------------------------------------
-// Callable
-// ---------------------------------------------------------------------------
+type ScoreResult = {
+  score: number;
+  reason: string;
+};
+
+function clampScore(score: number): number {
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+function parseScoreResult(text: string): ScoreResult {
+  try {
+    const parsed = JSON.parse(text) as { score?: unknown; reason?: unknown };
+    if (typeof parsed.score === "number" && typeof parsed.reason === "string") {
+      return { score: clampScore(parsed.score), reason: parsed.reason };
+    }
+  } catch {
+    // fallback
+  }
+  return { score: 50, reason: "採点の解析に失敗したため中立値を適用" };
+}
 
 export const sendMessage = onCall(
   { region: "asia-northeast1" },
   async (request) => {
-    // 1. Auth
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "ログインが必要です。");
     }
@@ -73,10 +81,7 @@ export const sendMessage = onCall(
       );
     }
 
-    // 2. キャラクター取得 + オーナー確認
-    const characterRef = db
-      .collection(COLLECTIONS.CHARACTERS)
-      .doc(characterId);
+    const characterRef = db.collection(COLLECTIONS.CHARACTERS).doc(characterId);
     const characterSnap = await characterRef.get();
     if (!characterSnap.exists) {
       throw new HttpsError("not-found", "キャラクターが見つかりません。");
@@ -89,14 +94,9 @@ export const sendMessage = onCall(
       );
     }
 
-    // 3. 卵からキャラクタープロンプトを取得 (eggId === characterId)
-    const eggSnap = await db
-      .collection(COLLECTIONS.EGGS)
-      .doc(characterId)
-      .get();
+    const eggSnap = await db.collection(COLLECTIONS.EGGS).doc(characterId).get();
     const egg = eggSnap.exists ? (eggSnap.data() as EggDoc) : null;
 
-    // 4. レート制限: 前回更新から RATE_LIMIT_MS 以内は拒否
     const chatId = chatIdFor(characterId, uid);
     const chatRef = db.collection(COLLECTIONS.CHATS).doc(chatId);
     const chatSnap = await chatRef.get();
@@ -116,7 +116,6 @@ export const sendMessage = onCall(
       }
     }
 
-    // 5. 直近の会話履歴を取得
     const messagesRef = chatRef.collection(SUBCOLLECTIONS.CHAT_MESSAGES);
     const historySnap = await messagesRef
       .orderBy("createdAt", "desc")
@@ -131,19 +130,25 @@ export const sendMessage = onCall(
       };
     });
 
-    // 6. システムプロンプト構築
+    const passionMemory = character.passionMemory ?? { overview: "", attractions: [] };
+    const passionAttractionsText =
+      passionMemory.attractions.length > 0
+        ? passionMemory.attractions.join(" / ")
+        : "未設定";
+
     const systemParts = [
       characterGrowingPrompt.systemPrompt,
       `キャラクター名: ${character.name}`,
       `性格・特徴: ${character.personality}`,
       `専門知識領域: ${character.knowledgeAreas.join("、")}`,
+      `偏愛概要: ${passionMemory.overview || "未設定"}`,
+      `偏愛対象の魅力: ${passionAttractionsText}`,
     ];
     if (egg?.characterPrompt) {
       systemParts.push(`キャラクタープロンプト: ${egg.characterPrompt}`);
     }
     const systemPrompt = systemParts.join("\n");
 
-    // 7. OpenAI 呼び出し
     const model = process.env.OPENAI_MODEL ?? DEFAULT_MODEL;
     const messages: OpenAIMessage[] = [
       { role: "system", content: systemPrompt },
@@ -177,25 +182,45 @@ export const sendMessage = onCall(
       );
     }
 
-    // 8. Firestore へ書き込み (バッチ)
+    const scorePrompt = [
+      "あなたは偏愛育成コーチです。ユーザー発話の質を0~100で採点してください。",
+      "評価観点: 偏愛対象の具体性/独自性/体験の深さ。",
+      `偏愛概要: ${passionMemory.overview || "未設定"}`,
+      `偏愛魅力: ${passionAttractionsText}`,
+      `ユーザー発話: ${userMessage}`,
+      'JSONのみで返答: {"score": number, "reason": string}',
+    ].join("\n");
+
+    const scoreResponse = await fetch(OPENAI_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({ model, input: [{ role: "user", content: scorePrompt }] }),
+    });
+    const scoreText = scoreResponse.ok
+      ? ((await scoreResponse.json()) as OpenAIResponsesOutput).output_text?.trim() ?? ""
+      : "";
+    const scoreResult = parseScoreResult(scoreText);
+
     const now = FieldValue.serverTimestamp();
     const batch = db.batch();
 
-    // user メッセージ
     batch.set(messagesRef.doc(), {
       role: "user",
       content: userMessage,
       createdAt: now,
+      score: scoreResult.score,
+      scoreReason: scoreResult.reason,
     });
 
-    // character メッセージ
     batch.set(messagesRef.doc(), {
       role: "character",
       content: reply,
       createdAt: now,
     });
 
-    // ChatDoc を upsert
     batch.set(
       chatRef,
       {
@@ -207,14 +232,14 @@ export const sendMessage = onCall(
       { merge: true },
     );
 
-    // 9. affinityScore を微増
+    const affinityDelta = Math.max(-2, Math.floor((scoreResult.score - 50) / 10));
     batch.update(characterRef, {
-      affinityScore: FieldValue.increment(1),
+      affinityScore: FieldValue.increment(affinityDelta),
       updatedAt: now,
     });
 
     await batch.commit();
 
-    return { reply };
+    return { reply, score: scoreResult.score, scoreReason: scoreResult.reason };
   },
 );
