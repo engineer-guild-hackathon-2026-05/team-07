@@ -4,12 +4,12 @@ type BottomNavProps = {
   firstCharacterId?: string
 }
 
-const navItems: Array<{ path: string; label: string; icon: string; match?: string }> = [
-  { path: '/', label: 'Home', icon: '⌂' },
-  { path: '/passions/new', label: '偏愛', icon: '▣' },
-  { path: '/exchange/share', label: '交換', icon: '⇄', match: '/exchange' },
-  { path: '/characters', label: '育成', icon: '✦', match: '/characters' },
-  { path: '/profile', label: 'Profile', icon: '⚙' },
+const navItems: Array<{ path: string; label: string; icon: string; ariaLabel: string; match?: string }> = [
+  { path: '/', label: 'Home', icon: '⌂', ariaLabel: 'ホーム' },
+  { path: '/passions/new', label: '偏愛', icon: '♥', ariaLabel: '偏愛を登録する' },
+  { path: '/exchange/share', label: '交換', icon: '⇄', ariaLabel: '卵を交換する', match: '/exchange' },
+  { path: '/characters', label: '育成', icon: '✦', ariaLabel: 'キャラを育てる', match: '/characters' },
+  { path: '/profile', label: 'Profile', icon: '⚙', ariaLabel: 'プロフィール' },
 ]
 
 export function BottomNav({ firstCharacterId }: BottomNavProps) {
@@ -29,7 +29,13 @@ export function BottomNav({ firstCharacterId }: BottomNavProps) {
             item.path === '/' ? location.pathname === '/' : location.pathname.startsWith(item.match ?? item.path)
 
           return (
-            <Link key={item.path} to={path} className={isActive ? 'is-active' : ''} aria-label={item.label}>
+            <Link
+              key={item.path}
+              to={path}
+              className={isActive ? 'is-active' : ''}
+              aria-label={item.ariaLabel}
+              title={item.ariaLabel}
+            >
               <span className="app-nav__icon">{item.icon}</span>
               <span className="app-nav__label">{item.label}</span>
             </Link>

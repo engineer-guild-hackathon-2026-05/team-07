@@ -1,7 +1,7 @@
 import { Navigate } from 'react-router-dom'
 import { Button, StackedActionButton } from '../components/ui'
 import { CharacterIllustration } from '../features/components/CharacterIllustration'
-import { charactersBg } from '../lib/characterAssets'
+import { LoginCinematicBackground } from '../features/login'
 import loginHeroGif from '../assets/login-hero.gif'
 import type { User } from '../types/models'
 
@@ -46,50 +46,58 @@ export function LoginPage({
 
   return (
     <div className="login-screen">
-      <div className="login-scene" aria-hidden>
-        <img src={charactersBg} alt="" className="login-scene__bg" />
-        <div className="login-scene__fade" />
-      </div>
+      <LoginCinematicBackground />
 
       <div className="login-layout">
         <section className="login-hero" aria-labelledby="login-heading">
-          <div className="login-hero__main">
-            <div className="login-hero__copy">
-              <p className="eyebrow">偏愛キャラクター育成アプリ</p>
-              <h1 id="login-heading">HenAi Egg</h1>
-              <p className="login-tagline">好きを、キャラに。偏愛を、つなごう。</p>
-            </div>
+          <div className="login-hero__stage">
+            <div className="login-hero__content">
+              <div className="login-hero__main">
+                <div className="login-hero__copy">
+                  <p className="eyebrow">偏愛キャラクター育成アプリ</p>
+                  <h1 id="login-heading">HenAi Egg</h1>
+                  <p className="login-tagline">好きを、キャラに。偏愛を、つなごう。</p>
+                </div>
 
-            <div className="login-actions" aria-label="ログイン">
-              <StackedActionButton
-                icon="G"
-                title="Sign in with Google"
-                description="アカウントを作成して、偏愛キャラ育成を始める"
-                onClick={onGoogleLogin}
-                disabled={isLoading}
-              />
-              <Button type="button" variant="secondary" onClick={onAnonymousLogin} disabled={isLoading}>
-                ゲストではじめる
-              </Button>
-              <Button type="button" variant="ghost" onClick={onDemoLogin} disabled={isLoading}>
-                デモとして見る
-              </Button>
-              <small className="demo-login-note">デモはFirebaseに接続せず、ログイン後UIだけ確認します。</small>
-              {authError ? <p className="auth-error">{authError}</p> : null}
-            </div>
+                <div className="login-panel" aria-label="ログイン">
+                  <p className="login-panel__heading">はじめる</p>
+                  <StackedActionButton
+                    className="login-panel__google"
+                    icon="G"
+                    title="Sign in with Google"
+                    description="アカウントを作成して、偏愛キャラ育成を始める"
+                    onClick={onGoogleLogin}
+                    disabled={isLoading}
+                  />
+                  <div className="login-panel__divider" aria-hidden>
+                    <span>または</span>
+                  </div>
+                  <div className="login-panel__alt">
+                    <Button type="button" variant="secondary" onClick={onAnonymousLogin} disabled={isLoading}>
+                      ゲストではじめる
+                    </Button>
+                    <Button type="button" variant="ghost" onClick={onDemoLogin} disabled={isLoading}>
+                      デモとして見る
+                    </Button>
+                  </div>
+                  <small className="demo-login-note">デモはFirebaseに接続せず、ログイン後UIだけ確認します。</small>
+                  {authError ? <p className="auth-error">{authError}</p> : null}
+                </div>
 
-            <p className="login-lead">
-              「これが好き」をことばにして登録すると、あなただけの偏愛キャラが卵から生まれます。
-              仲間と交換して、会話を重ねながら、好きの形に育てていきましょう。
-            </p>
-          </div>
+                <p className="login-lead">
+                  「これが好き」をことばにして登録すると、あなただけの偏愛キャラが卵から生まれます。
+                  仲間と交換して、会話を重ねながら、好きの形に育てていきましょう。
+                </p>
+              </div>
 
-          <div className="login-hero-art" aria-label="サービスのキャラクター">
-            <img src={loginHeroGif} alt="" className="login-hero-art__group" />
-            <div className="login-hero-art__cast">
-              <CharacterIllustration egg={{ motif: 'cat', color: '#4EDBFB', id: 'login-blue', name: 'そら' }} size="small" />
-              <CharacterIllustration egg={{ motif: 'fox', color: '#ffb6d9', id: 'login-pink', name: 'もも' }} size="small" />
-              <CharacterIllustration egg={{ motif: 'bird', color: '#d9c8ff', id: 'login-purple', name: 'ゆめ' }} size="small" />
+              <div className="login-hero-art" aria-label="サービスのキャラクター">
+                <img src={loginHeroGif} alt="" className="login-hero-art__group" />
+                <div className="login-hero-art__cast">
+                  <CharacterIllustration egg={{ motif: 'cat', color: '#4EDBFB', id: 'login-blue', name: 'そら' }} size="small" />
+                  <CharacterIllustration egg={{ motif: 'fox', color: '#ffb6d9', id: 'login-pink', name: 'もも' }} size="small" />
+                  <CharacterIllustration egg={{ motif: 'bird', color: '#d9c8ff', id: 'login-purple', name: 'ゆめ' }} size="small" />
+                </div>
+              </div>
             </div>
           </div>
         </section>
