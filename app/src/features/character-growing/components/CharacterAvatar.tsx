@@ -1,7 +1,4 @@
 
-import { CharacterIllustration at/pc} from '../../components/CharacterIllustration'
-import type { Character, Egg } from '../../../types/models'
-
 import { useState } from 'react'
 import type { Character, Egg } from '../../../types/models'
 import { Modal } from '../../../components/ui'
@@ -19,9 +16,8 @@ export function CharacterAvatar({ character, egg }: Props) {
 
   return (
 
-<!--     <div className="character-chat-header flex flex-col items-center gap-2.5 px-5 pt-5 pb-3 border-b border-[#ff9b37]/20 shrink-0">
-      <CharacterIllustration egg={egg} size="medium" showPedestal alt={character.name} />
- -->
+    // <div className="character-chat-header flex flex-col items-center gap-2.5 px-5 pt-5 pb-3 border-b border-[#ff9b37]/20 shrink-0">
+    //   <CharacterIllustration egg={egg} size="medium" showPedestal alt={character.name} />
     <>
       <div className="flex flex-col items-center gap-2 px-5 pt-6 pb-3 shrink-0">
         {/* Name + affinity badge — centered, directly above the image */}

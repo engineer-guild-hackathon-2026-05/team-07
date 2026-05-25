@@ -37,9 +37,9 @@ export function BottomNav({ firstCharacterId }: BottomNavProps) {
         })}
       </div>
 
-      <Link to="/dev/style" className="app-nav__footer">
+      {/* <Link to="/dev/style" className="app-nav__footer">
         Design System
-      </Link>
+      </Link> */}
     </nav>
   )
 }
