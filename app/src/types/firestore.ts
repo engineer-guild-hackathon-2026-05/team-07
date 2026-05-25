@@ -102,7 +102,7 @@ export interface PassionDoc {
   createdAt: DateLike;
   /** Visibility scope */
   visibility: "public" | "friends" | "private";
-  /** Conversation history for deep-dive chat (issue #6 temporary design) */
+  /** Conversation history used in character-making deep-dive chat */
   chatHistory?: Array<{
     role: "user" | "assistant";
     content: string;
