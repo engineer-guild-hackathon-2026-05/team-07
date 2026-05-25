@@ -16,6 +16,7 @@ import { formatShortDate, getCharacterForEgg, getPassionForEgg } from '../lib/vi
 import { receiveEggLocally } from '../lib/localRepository'
 import { COLLECTIONS } from '../types/firestore'
 import {
+  buildReceiveUrlForExchange,
   callCreateUrlExchange,
   ensureEggInFirestore,
 } from '../firebase/exchange'
@@ -83,6 +84,8 @@ export function ExchangePage({
   const [receiveStatus, setReceiveStatus] = useState('')
   const [isPublishing, setIsPublishing] = useState(false)
   const [publishError, setPublishError] = useState('')
+  const [publishedExchangeId, setPublishedExchangeId] = useState('')
+  const [publishedEggName, setPublishedEggName] = useState('')
   const [remoteOwnedEggs, setRemoteOwnedEggs] = useState<Egg[]>([])
   const [remotePassions, setRemotePassions] = useState<Passion[]>([])
   const [remoteCharacters, setRemoteCharacters] = useState<Character[]>([])
@@ -153,6 +156,9 @@ export function ExchangePage({
 
   const shareText = shareInput ? buildShareText(shareInput) : ''
   const lineShareUrl = shareText ? buildLineShareUrl(shareText) : ''
+  const publishedReceiveUrl = publishedExchangeId
+    ? buildReceiveUrlForExchange(publishedExchangeId)
+    : ''
 
   useEffect(() => {
     if (ownedEggs.length > 0 && !ownedEggs.some((egg) => egg.id === selectedEggId)) {
@@ -407,7 +413,9 @@ export function ExchangePage({
     try {
       await ensureEggInFirestore(selectedEgg, userId)
       const { exchangeId } = await callCreateUrlExchange(selectedEgg.id)
-      navigate(`/exchange/wait/${exchangeId}`)
+      setPublishedExchangeId(exchangeId)
+      setPublishedEggName(selectedEgg.name)
+      setShareStatus('URLを発行しました')
     } catch (error: unknown) {
       const code = (error as { code?: string })?.code ?? ''
       const message = (error as { message?: string })?.message ?? '不明なエラー'
@@ -633,6 +641,21 @@ export function ExchangePage({
                   <p className="status-message" style={{ color: '#c0392b' }}>
                     {publishError}
                   </p>
+                ) : null}
+                {publishedReceiveUrl ? (
+                  <Card>
+                    <p className="status-message">発行済みURL（{publishedEggName || '選択中の卵'}）</p>
+                    <p className="share-code">
+                      <strong style={{ wordBreak: 'break-all' }}>{publishedReceiveUrl}</strong>
+                    </p>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => navigate(`/exchange/wait/${publishedExchangeId}`)}
+                    >
+                      受け取り待機画面を開く
+                    </Button>
+                  </Card>
                 ) : null}
 
                 <StackedActionButton
