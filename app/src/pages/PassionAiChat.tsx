@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, Navigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import {
   continuePassionInterview,
   finalizePassionInterview,
@@ -13,6 +13,7 @@ type PassionAiChatPageProps = {
 }
 
 export function PassionAiChatPage({ userId }: PassionAiChatPageProps) {
+  const navigate = useNavigate()
   const { passionId } = useParams()
   const [messages, setMessages] = useState<PassionChatMessage[]>([])
   const [input, setInput] = useState('')
@@ -105,6 +106,7 @@ export function PassionAiChatPage({ userId }: PassionAiChatPageProps) {
     try {
       const result = await finalizePassionInterview(passionId)
       setSubjectAttractions(result.subjectAttractions)
+      navigate(`/passions/${passionId}/egg-create`)
     } catch {
       setErrorMessage('偏愛魅力の抽出に失敗しました。再試行してください。')
     } finally {
