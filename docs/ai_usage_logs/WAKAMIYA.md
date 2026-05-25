@@ -1,5 +1,7 @@
 # AI 活用ログ — Team {{TEAM_NUMBER}}
 
+> 記入者: WAKAMIYA（ChatGPTで記入）
+
 審査項目「AI 活用度」の根拠資料。Day1〜Day3 を通して、AI ツールをどう使ったかを記録する。
 **最低 1 日 3 件以上**の記入を目安に。
 
@@ -231,6 +233,48 @@
 - **出力サマリ**：`functions/src/prompts/character_making.json` と `character_growing.json` を追加。共通 callable `generateAiReply` を実装し `promptType` でJSONプロンプトを切替。互換用に `generatePassionReply` も維持。フロントに共通クライアント `src/lib/aiReply.ts` を追加し、`CharacterChat` から `promptType=character_growing` で呼び出すよう変更。
 - **評価**：採用
 - **採用 / 不採用の理由**：プロンプト管理の一元化と機能間の再利用性が上がり、Functions/フロントともビルド成功したため。
+
+### #003 コミット整理と新規Issue作成
+
+- **時刻**：13:10
+- **ツール**：Codex (GPT-5) + GitHub CLI
+- **目的**：コミット運用整理と、キャラクター作成（偏愛登録/偏愛深掘り）Issueの起票
+- **プロンプト**：
+  ```
+  WAKAMIYA.mdちゃんと更新してくださいねー！
+  それでは、issueを立てます。
+  キャラクター作成の、偏愛登録と偏愛深掘りを実装するissueを立ててください
+  ```
+- **出力サマリ**：AI usage log を更新した上で、偏愛登録 + 偏愛深掘りを対象にした実装IssueをGitHubで作成。
+- **評価**：採用
+- **採用 / 不採用の理由**：運用ルールとタスク管理を同時に満たせたため。
+
+### #004 偏愛深掘り機能の実装方針整理
+
+- **時刻**：13:25
+- **ツール**：Codex (GPT-5)
+- **目的**：実装前に偏愛深掘り機能の方針と追加機能を明文化
+- **プロンプト**：
+  ```
+  それでは、偏愛深掘り機能を実装します。
+  実装方針と追加する機能を先に説明してください。
+  ```
+- **出力サマリ**：共通 Cloud Functions API `generateAiReply` を `promptType=character_making` で利用する方針を提示。追加機能として、深掘りチャットUI、会話履歴保存（`passions/{passionId}.chatHistory`）、卵生成導線（1ユーザー1卵制限）を整理。
+- **評価**：採用
+- **採用 / 不採用の理由**：実装前にスコープと責務分割を共有でき、作業の手戻りを減らせるため。
+
+### #005 偏愛深掘り機能の実装
+
+- **時刻**：13:45
+- **ツール**：Codex (GPT-5)
+- **目的**：偏愛登録後にAI深掘りチャットへ遷移し、会話履歴を保存する
+- **プロンプト**：
+  ```
+  では実装してください
+  ```
+- **出力サマリ**：`AddPassion` 送信後に `passionId` を使って `/passions/:passionId/aichat` へ遷移。`PassionAiChat` 画面を追加し、`generateAiReply(promptType=character_making)` で応答取得。`passions/{passionId}.chatHistory` へ会話履歴を保存。`PassionDoc` 型にも `chatHistory` を追加。`app` と `functions` のビルド成功確認。
+- **評価**：採用
+- **採用 / 不採用の理由**：Issue #50 の深掘り導線に必要な機能を一式実装できたため。
 
 ---
 
