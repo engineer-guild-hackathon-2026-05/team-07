@@ -174,6 +174,7 @@ export function ExchangePage({
         const data = docSnap.data() as {
           sourceUserUid?: unknown
           basedOnPassionIds?: unknown
+          basedOnPassionId?: unknown
           characterPrompt?: unknown
           hatchLevel?: unknown
           createdAt?: unknown
@@ -182,12 +183,15 @@ export function ExchangePage({
           color?: unknown
           motif?: unknown
         }
+        const basedOnPassionIds = Array.isArray(data.basedOnPassionIds)
+          ? data.basedOnPassionIds.filter((v): v is string => typeof v === 'string')
+          : typeof data.basedOnPassionId === 'string' && data.basedOnPassionId
+            ? [data.basedOnPassionId]
+            : []
         return {
           id: docSnap.id,
           sourceUserUid: typeof data.sourceUserUid === 'string' ? data.sourceUserUid : userId,
-          basedOnPassionIds: Array.isArray(data.basedOnPassionIds)
-            ? data.basedOnPassionIds.filter((v): v is string => typeof v === 'string')
-            : [],
+          basedOnPassionIds,
           characterPrompt: typeof data.characterPrompt === 'string' ? data.characterPrompt : '',
           hatchLevel: typeof data.hatchLevel === 'number' ? data.hatchLevel : 0,
           createdAt: new Date().toISOString(),

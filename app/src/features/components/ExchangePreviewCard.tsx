@@ -10,6 +10,7 @@ type ExchangePreviewCardProps = {
 
 export function ExchangePreviewCard({ character, egg, passion, senderName }: ExchangePreviewCardProps) {
   const previewTags = passion?.tags.slice(0, 3) ?? []
+  const promptSummary = egg.characterPrompt.trim()
 
   return (
     <article
@@ -29,6 +30,11 @@ export function ExchangePreviewCard({ character, egg, passion, senderName }: Exc
             <p className="text-text text-sm leading-snug">
               偏愛の詳細は受け取ってから。タイトルとタグだけ先に見せます。
             </p>
+          </>
+        ) : promptSummary ? (
+          <>
+            <p className="text-text-heading font-black">偏愛メモ</p>
+            <p className="text-text text-sm leading-snug line-clamp-3">{promptSummary}</p>
           </>
         ) : (
           <p className="text-text text-sm leading-snug">この卵に紐づく偏愛データがありません。</p>
