@@ -1,9 +1,8 @@
-import {initializeApp} from "firebase-admin/app";
-import {HttpsError, onCall} from "firebase-functions/v2/https";
+export { sendMessage } from "./chat/sendMessage.js";
+
+import { HttpsError, onCall } from "firebase-functions/v2/https";
 import characterMakingPrompt from "./prompts/character_making.json";
 import characterGrowingPrompt from "./prompts/character_growing.json";
-
-initializeApp();
 
 type PromptType = "character_making" | "character_growing";
 
