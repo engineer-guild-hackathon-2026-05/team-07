@@ -1,6 +1,7 @@
-import { HttpsError, onCall } from "firebase-functions/v2/https";
-import { FieldValue } from "firebase-admin/firestore";
-import { db } from "../admin.js";
+/* eslint-disable max-len */
+import {HttpsError, onCall} from "firebase-functions/v2/https";
+import {FieldValue} from "firebase-admin/firestore";
+import {db} from "../admin.js";
 import {
   COLLECTIONS,
   SUBCOLLECTIONS,
@@ -38,24 +39,34 @@ type ScoreResult = {
   reason: string;
 };
 
+/**
+ * Clamps score into 0-100 integer range.
+ * @param {number} score Raw score.
+ * @return {number} Clamped score.
+ */
 function clampScore(score: number): number {
   return Math.max(0, Math.min(100, Math.round(score)));
 }
 
+/**
+ * Parses score JSON from model output.
+ * @param {string} text Raw model output.
+ * @return {ScoreResult} Parsed score and reason.
+ */
 function parseScoreResult(text: string): ScoreResult {
   try {
     const parsed = JSON.parse(text) as { score?: unknown; reason?: unknown };
     if (typeof parsed.score === "number" && typeof parsed.reason === "string") {
-      return { score: clampScore(parsed.score), reason: parsed.reason };
+      return {score: clampScore(parsed.score), reason: parsed.reason};
     }
   } catch {
     // fallback
   }
-  return { score: 50, reason: "採点の解析に失敗したため中立値を適用" };
+  return {score: 50, reason: "採点の解析に失敗したため中立値を適用"};
 }
 
 export const sendMessage = onCall(
-  { region: "asia-northeast1" },
+  {region: "asia-northeast1"},
   async (request) => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "ログインが必要です。");
@@ -105,9 +116,9 @@ export const sendMessage = onCall(
       const chatData = chatSnap.data() as ChatDoc;
       const updatedAt = chatData.updatedAt;
       const lastMs =
-        typeof updatedAt === "string"
-          ? new Date(updatedAt).getTime()
-          : updatedAt.toMillis();
+        typeof updatedAt === "string" ?
+          new Date(updatedAt).getTime() :
+          updatedAt.toMillis();
       if (Date.now() - lastMs < RATE_LIMIT_MS) {
         throw new HttpsError(
           "resource-exhausted",
@@ -130,11 +141,11 @@ export const sendMessage = onCall(
       };
     });
 
-    const passionMemory = character.passionMemory ?? { overview: "", attractions: [] };
+    const passionMemory = character.passionMemory ?? {overview: "", attractions: []};
     const passionAttractionsText =
-      passionMemory.attractions.length > 0
-        ? passionMemory.attractions.join(" / ")
-        : "未設定";
+      passionMemory.attractions.length > 0 ?
+        passionMemory.attractions.join(" / ") :
+        "未設定";
 
     const systemParts = [
       characterGrowingPrompt.systemPrompt,
@@ -151,18 +162,18 @@ export const sendMessage = onCall(
 
     const model = process.env.OPENAI_MODEL ?? DEFAULT_MODEL;
     const messages: OpenAIMessage[] = [
-      { role: "system", content: systemPrompt },
+      {role: "system", content: systemPrompt},
       ...history,
-      { role: "user", content: userMessage },
+      {role: "user", content: userMessage},
     ];
 
     const response = await fetch(OPENAI_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+        "Authorization": `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({ model, input: messages }),
+      body: JSON.stringify({model, input: messages}),
     });
 
     if (!response.ok) {
@@ -188,20 +199,20 @@ export const sendMessage = onCall(
       `偏愛概要: ${passionMemory.overview || "未設定"}`,
       `偏愛魅力: ${passionAttractionsText}`,
       `ユーザー発話: ${userMessage}`,
-      'JSONのみで返答: {"score": number, "reason": string}',
+      "JSONのみで返答: {\"score\": number, \"reason\": string}",
     ].join("\n");
 
     const scoreResponse = await fetch(OPENAI_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+        "Authorization": `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({ model, input: [{ role: "user", content: scorePrompt }] }),
+      body: JSON.stringify({model, input: [{role: "user", content: scorePrompt}]}),
     });
-    const scoreText = scoreResponse.ok
-      ? ((await scoreResponse.json()) as OpenAIResponsesOutput).output_text?.trim() ?? ""
-      : "";
+    const scoreText = scoreResponse.ok ?
+      ((await scoreResponse.json()) as OpenAIResponsesOutput).output_text?.trim() ?? "" :
+      "";
     const scoreResult = parseScoreResult(scoreText);
 
     const now = FieldValue.serverTimestamp();
@@ -229,7 +240,7 @@ export const sendMessage = onCall(
         lastMessagePreview: reply.slice(0, 100),
         updatedAt: now,
       },
-      { merge: true },
+      {merge: true},
     );
 
     const affinityDelta = Math.max(-2, Math.floor((scoreResult.score - 50) / 10));
@@ -240,6 +251,6 @@ export const sendMessage = onCall(
 
     await batch.commit();
 
-    return { reply, score: scoreResult.score, scoreReason: scoreResult.reason };
+    return {reply, score: scoreResult.score, scoreReason: scoreResult.reason};
   },
 );

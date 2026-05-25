@@ -114,6 +114,10 @@ export interface PassionDoc {
   makingStatus?: "draft" | "interviewing" | "finalized";
   /** Extracted unique attractions of the passion subject */
   subjectAttractions?: string[];
+  /** Latest interview question for UI resume */
+  latestInterviewQuestion?: string;
+  /** Latest suggested quick-answer choices */
+  latestReplyChoices?: string[];
 }
 
 /** eggs/{eggId} */

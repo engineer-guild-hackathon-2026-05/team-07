@@ -44,6 +44,8 @@ service cloud.firestore {
         'overview',
         'makingStatus',
         'subjectAttractions',
+        'latestInterviewQuestion',
+        'latestReplyChoices',
         'chatHistory',
       ]) &&
       request.resource.data.ownerUid is string &&
@@ -56,6 +58,8 @@ service cloud.firestore {
       (!('overview' in request.resource.data) || request.resource.data.overview is string) &&
       (!('makingStatus' in request.resource.data) || request.resource.data.makingStatus in ['draft', 'interviewing', 'finalized']) &&
       (!('subjectAttractions' in request.resource.data) || request.resource.data.subjectAttractions is list) &&
+      (!('latestInterviewQuestion' in request.resource.data) || request.resource.data.latestInterviewQuestion is string) &&
+      (!('latestReplyChoices' in request.resource.data) || request.resource.data.latestReplyChoices is list) &&
       request.resource.data.chatHistory is list &&
       request.resource.data.chatHistory.size() <= 200;
     }

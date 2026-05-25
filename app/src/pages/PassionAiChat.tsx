@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, Navigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import {
   continuePassionInterview,
   finalizePassionInterview,
@@ -13,6 +13,7 @@ type PassionAiChatPageProps = {
 }
 
 export function PassionAiChatPage({ userId }: PassionAiChatPageProps) {
+  const navigate = useNavigate()
   const { passionId } = useParams()
   const [messages, setMessages] = useState<PassionChatMessage[]>([])
   const [input, setInput] = useState('')
@@ -20,6 +21,7 @@ export function PassionAiChatPage({ userId }: PassionAiChatPageProps) {
   const [isFinalizing, setIsFinalizing] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [subjectAttractions, setSubjectAttractions] = useState<string[]>([])
+  const [replyChoices, setReplyChoices] = useState<string[]>([])
 
   useEffect(() => {
     if (!passionId) {
@@ -30,6 +32,7 @@ export function PassionAiChatPage({ userId }: PassionAiChatPageProps) {
       try {
         const [profile, loadedMessages] = await Promise.all([loadPassionProfile(passionId), loadMakingMessages(passionId)])
         setSubjectAttractions(profile.subjectAttractions)
+        setReplyChoices(profile.latestReplyChoices)
 
         if (loadedMessages.length > 0) {
           setMessages(loadedMessages)
@@ -38,6 +41,7 @@ export function PassionAiChatPage({ userId }: PassionAiChatPageProps) {
 
         const started = await startPassionInterview(passionId)
         setMessages(started.messages)
+        setReplyChoices(started.choices ?? [])
       } catch {
         setErrorMessage('初期化に失敗しました。時間をおいて再試行してください。')
       }
@@ -84,6 +88,7 @@ export function PassionAiChatPage({ userId }: PassionAiChatPageProps) {
         createdAt: new Date().toISOString(),
       }
       setMessages([...nextBase, assistantMessage])
+      setReplyChoices(response.choices ?? [])
     } catch {
       setErrorMessage('AI応答の取得に失敗しました。時間をおいて再試行してください。')
       setMessages(messages)
@@ -101,6 +106,7 @@ export function PassionAiChatPage({ userId }: PassionAiChatPageProps) {
     try {
       const result = await finalizePassionInterview(passionId)
       setSubjectAttractions(result.subjectAttractions)
+      navigate(`/passions/${passionId}/egg-create`)
     } catch {
       setErrorMessage('偏愛魅力の抽出に失敗しました。再試行してください。')
     } finally {
@@ -156,6 +162,22 @@ export function PassionAiChatPage({ userId }: PassionAiChatPageProps) {
             {isFinalizing ? '抽出中...' : '魅力を抽出して確定'}
           </button>
         </div>
+
+        {replyChoices.length > 0 ? (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {replyChoices.map((choice) => (
+              <button
+                key={choice}
+                type="button"
+                disabled={isSending}
+                onClick={() => setInput(choice)}
+                className="rounded-full border border-[#f1e7dc] bg-[#fff8f0] px-3 py-1.5 text-xs font-semibold text-[#494949] hover:border-[#ff9b37] hover:text-[#e77300] disabled:opacity-60"
+              >
+                {choice}
+              </button>
+            ))}
+          </div>
+        ) : null}
 
         <div className="flex gap-2">
           <input
