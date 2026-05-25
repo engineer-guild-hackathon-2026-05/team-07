@@ -1,9 +1,11 @@
 import type { FormEvent } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { collection, getDocs, query, where } from 'firebase/firestore'
 import { Button, Card, StackedActionButton, TextField, Textarea } from '../components/ui'
 import { ExchangePreviewCard } from '../features/components/ExchangePreviewCard'
 import { EggArt } from '../features/components/EggArt'
+import { db } from '../firebase/firebase'
 import {
   buildLineShareUrl,
   buildShareText,
@@ -12,6 +14,7 @@ import {
 } from '../lib/exchangeShare'
 import { formatShortDate, getCharacterForEgg, getPassionForEgg } from '../lib/viewHelpers'
 import { receiveEggLocally } from '../lib/localRepository'
+import { COLLECTIONS } from '../types/firestore'
 import {
   callCreateUrlExchange,
   ensureEggInFirestore,
@@ -80,8 +83,21 @@ export function ExchangePage({
   const [receiveStatus, setReceiveStatus] = useState('')
   const [isPublishing, setIsPublishing] = useState(false)
   const [publishError, setPublishError] = useState('')
+  const [remoteOwnedEggs, setRemoteOwnedEggs] = useState<Egg[]>([])
 
-  const selectedEgg = eggs.find((egg) => egg.id === selectedEggId) ?? eggs[0]
+  const ownedEggs = useMemo(() => {
+    const merged = [...eggs, ...remoteOwnedEggs]
+    const seen = new Set<string>()
+    return merged.filter((egg) => {
+      if (seen.has(egg.id)) {
+        return false
+      }
+      seen.add(egg.id)
+      return true
+    })
+  }, [eggs, remoteOwnedEggs])
+
+  const selectedEgg = ownedEggs.find((egg) => egg.id === selectedEggId) ?? ownedEggs[0]
   const selectedPassion = selectedEgg ? getPassionForEgg(allPassions, selectedEgg) : undefined
   const selectedCharacter = selectedEgg ? getCharacterForEgg(characters, selectedEgg) : undefined
 
@@ -115,10 +131,53 @@ export function ExchangePage({
   const lineShareUrl = shareText ? buildLineShareUrl(shareText) : ''
 
   useEffect(() => {
-    if (eggs.length > 0 && !eggs.some((egg) => egg.id === selectedEggId)) {
-      setSelectedEggId(eggs[0].id)
+    if (ownedEggs.length > 0 && !ownedEggs.some((egg) => egg.id === selectedEggId)) {
+      setSelectedEggId(ownedEggs[0].id)
     }
-  }, [eggs, selectedEggId])
+  }, [ownedEggs, selectedEggId])
+
+  useEffect(() => {
+    if (!userId) {
+      setRemoteOwnedEggs([])
+      return
+    }
+
+    const loadOwnedEggs = async () => {
+      const eggsRef = collection(db, COLLECTIONS.EGGS)
+      const q = query(eggsRef, where('currentOwnerUid', '==', userId))
+      const snap = await getDocs(q)
+      const fetchedEggs: Egg[] = snap.docs.map((docSnap) => {
+        const data = docSnap.data() as {
+          sourceUserUid?: unknown
+          basedOnPassionIds?: unknown
+          characterPrompt?: unknown
+          hatchLevel?: unknown
+          createdAt?: unknown
+          currentOwnerUid?: unknown
+          name?: unknown
+          color?: unknown
+          motif?: unknown
+        }
+        return {
+          id: docSnap.id,
+          sourceUserUid: typeof data.sourceUserUid === 'string' ? data.sourceUserUid : userId,
+          basedOnPassionIds: Array.isArray(data.basedOnPassionIds)
+            ? data.basedOnPassionIds.filter((v): v is string => typeof v === 'string')
+            : [],
+          characterPrompt: typeof data.characterPrompt === 'string' ? data.characterPrompt : '',
+          hatchLevel: typeof data.hatchLevel === 'number' ? data.hatchLevel : 0,
+          createdAt: new Date().toISOString(),
+          currentOwnerUid: typeof data.currentOwnerUid === 'string' ? data.currentOwnerUid : userId,
+          name: typeof data.name === 'string' && data.name ? data.name : 'たまご',
+          color: typeof data.color === 'string' && data.color ? data.color : '#FF9B37',
+          motif: data.motif === 'fox' || data.motif === 'cat' || data.motif === 'bird' ? data.motif : 'egg',
+        }
+      })
+      setRemoteOwnedEggs(fetchedEggs)
+    }
+
+    void loadOwnedEggs().catch(() => setRemoteOwnedEggs([]))
+  }, [userId])
 
   useEffect(() => {
     if (!shareStatus) {
@@ -350,13 +409,13 @@ export function ExchangePage({
         <section className="exchange-share-panel">
           <div className="grid gap-2">
             <span className="text-sm font-extrabold text-text-heading">渡す卵を選ぶ</span>
-            {eggs.length > 0 ? (
+            {ownedEggs.length > 0 ? (
               <div
                 className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1 snap-x snap-mandatory [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
                 role="listbox"
                 aria-label="渡す卵を選ぶ"
               >
-                {eggs.map((egg) => {
+                {ownedEggs.map((egg) => {
                   const isSelected = egg.id === selectedEggId
 
                   return (
