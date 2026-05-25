@@ -317,14 +317,30 @@ export function ExchangePage({
   return (
     <div className="screen exchange-screen">
       <Card className="exchange-hero">
-        <p className="eyebrow">exch-01 / exch-02</p>
-        <h1>卵を交換する</h1>
-        <p>偏愛のお品書きを添えて渡す。会場ではQR、離れた相手にはLINE共有。</p>
-        <div className="segment-tabs">
-          <Link to="/exchange/share" className={isShareMode ? 'is-active' : ''}>
+        <h1 className="m-0 text-text-heading text-3xl font-black">交換</h1>
+        <p className="m-0 text-text-heading text-lg font-extrabold">卵を交換する</p>
+        <p className="m-0 text-text text-sm leading-relaxed">
+          偏愛のお品書きを添えて渡す。会場ではQR、離れた相手にはLINE共有。
+        </p>
+        <div className="grid grid-cols-2 gap-1.5 rounded-[18px] bg-[#fff1df] p-1.5">
+          <Link
+            to="/exchange/share"
+            className={`grid place-items-center min-h-[44px] rounded-[14px] text-sm font-black transition-all ${
+              isShareMode
+                ? 'bg-white text-primary-strong shadow-[0_4px_14px_rgba(231,115,0,0.14)]'
+                : 'bg-transparent text-primary-strong/55 hover:text-primary-strong/80'
+            }`}
+          >
             渡す
           </Link>
-          <Link to="/exchange/scan" className={location.pathname.startsWith('/exchange/scan') ? 'is-active' : ''}>
+          <Link
+            to="/exchange/scan"
+            className={`grid place-items-center min-h-[44px] rounded-[14px] text-sm font-black transition-all ${
+              location.pathname.startsWith('/exchange/scan')
+                ? 'bg-white text-primary-strong shadow-[0_4px_14px_rgba(231,115,0,0.14)]'
+                : 'bg-transparent text-primary-strong/55 hover:text-primary-strong/80'
+            }`}
+          >
             読み取る
           </Link>
         </div>
@@ -332,16 +348,43 @@ export function ExchangePage({
 
       {isShareMode ? (
         <section className="exchange-share-panel">
-          <label className="field compact-field">
-            <span>渡す卵を選ぶ</span>
-            <select value={selectedEgg?.id ?? ''} onChange={(event) => setSelectedEggId(event.target.value)}>
-              {eggs.map((egg) => (
-                <option value={egg.id} key={egg.id}>
-                  {egg.name} / 孵化 {egg.hatchLevel}%
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="grid gap-2">
+            <span className="text-sm font-extrabold text-text-heading">渡す卵を選ぶ</span>
+            {eggs.length > 0 ? (
+              <div
+                className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1 snap-x snap-mandatory [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                role="listbox"
+                aria-label="渡す卵を選ぶ"
+              >
+                {eggs.map((egg) => {
+                  const isSelected = egg.id === selectedEggId
+
+                  return (
+                    <button
+                      key={egg.id}
+                      type="button"
+                      role="option"
+                      aria-selected={isSelected}
+                      aria-label={egg.name}
+                      onClick={() => setSelectedEggId(egg.id)}
+                      className={`shrink-0 snap-start grid w-[100px] gap-2 place-items-center rounded-3xl border p-3 pt-4 text-center transition-all ${
+                        isSelected
+                          ? 'border-primary-strong bg-white shadow-[0_8px_22px_rgba(231,115,0,0.16)]'
+                          : 'border-[rgba(255,155,55,0.12)] bg-[#fff8f0] hover:border-[rgba(255,155,55,0.28)]'
+                      }`}
+                    >
+                      <div className="grid h-[82px] w-[66px] place-items-center">
+                        <EggArt egg={egg} label="" />
+                      </div>
+                      <strong className="max-w-full truncate text-xs font-black text-text-heading">{egg.name}</strong>
+                    </button>
+                  )
+                })}
+              </div>
+            ) : (
+              <p className="status-message">渡せる卵がありません。先に偏愛を登録してください。</p>
+            )}
+          </div>
 
           {selectedEgg ? (
             <ExchangePreviewCard
@@ -518,18 +561,6 @@ export function ExchangePage({
           </form>
         </section>
       ) : null}
-
-      <div className="egg-scroll">
-        {eggs.map((egg) => (
-          <article className="mini-card" key={egg.id}>
-            <EggArt egg={egg} />
-            <div>
-              <strong>{egg.name}</strong>
-              <p>孵化 {egg.hatchLevel}%</p>
-            </div>
-          </article>
-        ))}
-      </div>
 
       <Card>
         <h2>交換履歴</h2>
