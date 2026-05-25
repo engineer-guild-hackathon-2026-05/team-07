@@ -15,6 +15,12 @@ type GenerateAiReplyRequest = {
 
 type OpenAIResponsesApiOutput = {
   output_text?: string;
+  output?: Array<{
+    content?: Array<{
+      type?: string;
+      text?: string;
+    }>;
+  }>;
 };
 
 type PromptConfig = {
@@ -88,7 +94,13 @@ async function callOpenAi({
   }
 
   const json = await response.json() as OpenAIResponsesApiOutput;
-  const reply = json.output_text?.trim();
+  const fallbackText = json.output
+    ?.flatMap((item) => item.content ?? [])
+    .filter((part) => part.type === "output_text" || part.type === "text")
+    .map((part) => part.text ?? "")
+    .join("")
+    .trim();
+  const reply = json.output_text?.trim() || fallbackText;
   if (!reply) {
     throw new HttpsError("internal", "OpenAI API から応答を取得できませんでした。");
   }
