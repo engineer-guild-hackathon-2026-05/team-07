@@ -11,7 +11,6 @@ type PassionAiChatPageProps = {
 const QUICK_REPLIES = ['夜に聴くのが好き', 'ひとりの時間が好き', '誰かに勧めたい']
 
 export function PassionAiChatPage({ userId }: PassionAiChatPageProps) {
-  const navigate = useNavigate()
   const { passionId } = useParams()
   const [messages, setMessages] = useState<PassionChatMessage[]>([])
   const [input, setInput] = useState('')
