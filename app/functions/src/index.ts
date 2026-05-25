@@ -1,9 +1,8 @@
-import {initializeApp} from "firebase-admin/app";
-import {HttpsError, onCall} from "firebase-functions/v2/https";
+export { sendMessage } from "./chat/sendMessage.js";
+
+import { HttpsError, onCall } from "firebase-functions/v2/https";
 import characterMakingPrompt from "./prompts/character_making.json";
 import characterGrowingPrompt from "./prompts/character_growing.json";
-
-initializeApp();
 
 type PromptType = "character_making" | "character_growing";
 
@@ -35,11 +34,6 @@ const PROMPTS: Record<PromptType, PromptConfig> = {
   character_growing: characterGrowingPrompt,
 };
 
-/**
- * Calls OpenAI Responses API with prompt template and user input.
- * @param {GenerateAiReplyRequest} param0 request payload
- * @return {Promise<string>} generated assistant reply text
- */
 async function callOpenAi({
   promptType,
   message,
