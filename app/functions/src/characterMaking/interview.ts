@@ -1,0 +1,241 @@
+import { HttpsError, onCall } from "firebase-functions/v2/https";
+import { FieldValue } from "firebase-admin/firestore";
+import { db } from "../admin.js";
+import { COLLECTIONS, SUBCOLLECTIONS } from "../types/firestore.js";
+import type { PassionDoc, PassionMakingMessageDoc } from "../types/firestore.js";
+
+const OPENAI_API_URL = "https://api.openai.com/v1/responses";
+const DEFAULT_MODEL = "gpt-4.1-mini";
+const HISTORY_LIMIT = 24;
+
+type OpenAIResponsesOutput = {
+  output_text?: string;
+};
+
+type StartInterviewInput = { passionId: string };
+type ContinueInterviewInput = { passionId: string; userMessage: string };
+type FinalizeInterviewInput = { passionId: string };
+
+function requireApiKey(): string {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new HttpsError("failed-precondition", "OPENAI_API_KEY が未設定です。");
+  }
+  return apiKey;
+}
+
+function buildOverview(passion: PassionDoc): string {
+  const tags = passion.tags.length > 0 ? passion.tags.map((tag) => `#${tag}`).join(" ") : "#タグなし";
+  return `タイトル: ${passion.title}\n概要: ${passion.description}\nタグ: ${tags}`;
+}
+
+async function callOpenAi(input: Array<{ role: "system" | "user" | "assistant"; content: string }>): Promise<string> {
+  const apiKey = requireApiKey();
+  const model = process.env.OPENAI_MODEL ?? DEFAULT_MODEL;
+
+  const response = await fetch(OPENAI_API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({ model, input }),
+  });
+
+  if (!response.ok) {
+    throw new HttpsError("internal", "AI応答の生成に失敗しました。");
+  }
+
+  const json = (await response.json()) as OpenAIResponsesOutput;
+  const text = json.output_text?.trim();
+  if (!text) {
+    throw new HttpsError("internal", "AI応答の生成に失敗しました。");
+  }
+
+  return text;
+}
+
+async function getPassionOrThrow(uid: string, passionId: string) {
+  const passionRef = db.collection(COLLECTIONS.PASSIONS).doc(passionId);
+  const snap = await passionRef.get();
+  if (!snap.exists) {
+    throw new HttpsError("not-found", "偏愛データが見つかりません。");
+  }
+  const passion = snap.data() as PassionDoc;
+  if (passion.ownerUid !== uid) {
+    throw new HttpsError("permission-denied", "この偏愛にはアクセスできません。");
+  }
+  return { passionRef, passion };
+}
+
+export const startPassionInterview = onCall(
+  { region: "asia-northeast1" },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "認証が必要です。");
+    }
+    const uid = request.auth.uid;
+    const data = request.data as StartInterviewInput | undefined;
+    const passionId = data?.passionId?.trim();
+    if (!passionId) {
+      throw new HttpsError("invalid-argument", "passionId は必須です。");
+    }
+
+    const { passionRef, passion } = await getPassionOrThrow(uid, passionId);
+    const overview = passion.overview?.trim() || buildOverview(passion);
+
+    const messagesRef = passionRef.collection(SUBCOLLECTIONS.PASSION_MAKING_MESSAGES);
+    const existing = await messagesRef.orderBy("createdAt", "asc").limit(1).get();
+    if (!existing.empty) {
+      const list = await messagesRef.orderBy("createdAt", "asc").limit(HISTORY_LIMIT).get();
+      return {
+        overview,
+        messages: list.docs.map((d) => d.data() as PassionMakingMessageDoc),
+      };
+    }
+
+    const assistantText = await callOpenAi([
+      {
+        role: "system",
+        content:
+          "あなたは偏愛インタビュアーです。ユーザーの偏愛対象の魅力を抽出するため、短く具体的な質問を1つ返してください。",
+      },
+      {
+        role: "user",
+        content: `この偏愛の最初の質問を作ってください。\n${overview}`,
+      },
+    ]);
+
+    await db.runTransaction(async (tx) => {
+      tx.set(
+        passionRef,
+        { overview, makingStatus: "interviewing", subjectAttractions: passion.subjectAttractions ?? [] },
+        { merge: true },
+      );
+      tx.set(messagesRef.doc(), {
+        role: "assistant",
+        content: assistantText,
+        createdAt: FieldValue.serverTimestamp(),
+      });
+    });
+
+    return {
+      overview,
+      messages: [{ role: "assistant", content: assistantText, createdAt: new Date().toISOString() }],
+    };
+  },
+);
+
+export const continuePassionInterview = onCall(
+  { region: "asia-northeast1" },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "認証が必要です。");
+    }
+    const uid = request.auth.uid;
+    const data = request.data as ContinueInterviewInput | undefined;
+    const passionId = data?.passionId?.trim();
+    const userMessage = data?.userMessage?.trim();
+    if (!passionId || !userMessage) {
+      throw new HttpsError("invalid-argument", "passionId と userMessage は必須です。");
+    }
+
+    const { passionRef, passion } = await getPassionOrThrow(uid, passionId);
+    const overview = passion.overview?.trim() || buildOverview(passion);
+    const messagesRef = passionRef.collection(SUBCOLLECTIONS.PASSION_MAKING_MESSAGES);
+
+    const historySnap = await messagesRef.orderBy("createdAt", "desc").limit(HISTORY_LIMIT).get();
+    const history = historySnap.docs.reverse().map((d) => {
+      const msg = d.data() as PassionMakingMessageDoc;
+      return { role: msg.role, content: msg.content };
+    });
+
+    const assistantText = await callOpenAi([
+      {
+        role: "system",
+        content:
+          "あなたは偏愛インタビュアーです。偏愛対象の魅力が具体化するように、自然な日本語で質問を1つ返してください。",
+      },
+      { role: "user", content: `偏愛概要:\n${overview}` },
+      ...history,
+      { role: "user", content: userMessage },
+    ]);
+
+    const now = FieldValue.serverTimestamp();
+    const batch = db.batch();
+    batch.set(messagesRef.doc(), { role: "user", content: userMessage, createdAt: now });
+    batch.set(messagesRef.doc(), { role: "assistant", content: assistantText, createdAt: now });
+    batch.set(passionRef, { overview, makingStatus: "interviewing" }, { merge: true });
+    await batch.commit();
+
+    return { reply: assistantText };
+  },
+);
+
+export const finalizePassionInterview = onCall(
+  { region: "asia-northeast1" },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "認証が必要です。");
+    }
+    const uid = request.auth.uid;
+    const data = request.data as FinalizeInterviewInput | undefined;
+    const passionId = data?.passionId?.trim();
+    if (!passionId) {
+      throw new HttpsError("invalid-argument", "passionId は必須です。");
+    }
+
+    const { passionRef, passion } = await getPassionOrThrow(uid, passionId);
+    const overview = passion.overview?.trim() || buildOverview(passion);
+    const messagesRef = passionRef.collection(SUBCOLLECTIONS.PASSION_MAKING_MESSAGES);
+    const historySnap = await messagesRef.orderBy("createdAt", "asc").limit(60).get();
+
+    const transcript = historySnap.docs
+      .map((d) => {
+        const msg = d.data() as PassionMakingMessageDoc;
+        return `${msg.role === "user" ? "USER" : "AI"}: ${msg.content}`;
+      })
+      .join("\n");
+
+    const extraction = await callOpenAi([
+      {
+        role: "system",
+        content:
+          "あなたは偏愛分析AIです。会話から偏愛対象の魅力を抽出します。JSONのみで {\"attractions\":[\"...\"]} を返してください。",
+      },
+      {
+        role: "user",
+        content: `偏愛概要:\n${overview}\n\n会話:\n${transcript}`,
+      },
+    ]);
+
+    let attractions: string[] = [];
+    try {
+      const parsed = JSON.parse(extraction) as { attractions?: unknown };
+      if (Array.isArray(parsed.attractions)) {
+        attractions = parsed.attractions
+          .filter((v): v is string => typeof v === "string")
+          .map((v) => v.trim())
+          .filter((v) => v.length > 0)
+          .slice(0, 8);
+      }
+    } catch {
+      // fallback
+    }
+
+    if (attractions.length === 0) {
+      attractions = ["具体的な体験と感情の深い結びつき", "対象の細部に対する独自視点"];
+    }
+
+    await passionRef.set(
+      {
+        overview,
+        subjectAttractions: attractions,
+        makingStatus: "finalized",
+      },
+      { merge: true },
+    );
+
+    return { subjectAttractions: attractions };
+  },
+);
