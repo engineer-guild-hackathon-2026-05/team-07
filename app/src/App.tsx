@@ -10,7 +10,6 @@ import { DevStylePage } from './pages/DevStyle'
 import { ExchangePage } from './pages/Exchange'
 import { ExchangeReceiveByIdPage } from './pages/ExchangeReceiveById'
 import { ExchangeWaitPage } from './pages/ExchangeWait'
-import { HomePage } from './pages/Home'
 import { LoginPage } from './pages/Login'
 import { PassionAiChatPage } from './pages/PassionAiChat'
 import { PassionEggCreatePage } from './pages/PassionEggCreate'
@@ -101,16 +100,7 @@ function AppContent() {
           />
           <Route
             path="/"
-            element={
-              <RequireAuth user={user}>
-                <HomePage
-                  user={user!}
-                  eggs={eggs}
-                  characters={characters}
-                  onLogout={handleLogout}
-                />
-              </RequireAuth>
-            }
+            element={<Navigate to="/characters" replace />}
           />
           <Route
             path="/passions/new"
@@ -211,7 +201,7 @@ function AppContent() {
             path="/characters"
             element={
               <RequireAuth user={user}>
-                <CharacterDetailPage eggs={eggs} characters={characters} userId={user?.uid ?? ''} />
+                <CharacterDetailPage eggs={eggs} characters={characters} userId={user?.uid ?? ''} user={user!} onLogout={handleLogout} />
               </RequireAuth>
             }
           />
@@ -219,7 +209,7 @@ function AppContent() {
             path="/characters/:characterId"
             element={
               <RequireAuth user={user}>
-                <CharacterDetailPage eggs={eggs} characters={characters} userId={user?.uid ?? ''} />
+                <CharacterDetailPage eggs={eggs} characters={characters} userId={user?.uid ?? ''} user={user!} onLogout={handleLogout} />
               </RequireAuth>
             }
           />

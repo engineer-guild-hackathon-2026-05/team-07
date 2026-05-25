@@ -2,17 +2,19 @@ import { Navigate, useParams } from 'react-router-dom'
 import { CharacterChat } from '../components/CharacterChat'
 import { EmptyState } from '../components/ui'
 import { getEggForCharacter } from '../lib/viewHelpers'
-import type { Character, Egg } from '../types/models'
+import type { Character, Egg, User } from '../types/models'
 
 type CharacterDetailPageProps = {
   characters: Character[]
   eggs: Egg[]
   userId?: string
+  user: User
+  onLogout: () => Promise<void> | void
 }
 
 const FALLBACK_USER_ID = 'local-user-m-takahashi'
 
-export function CharacterDetailPage({ characters, eggs, userId = FALLBACK_USER_ID }: CharacterDetailPageProps) {
+export function CharacterDetailPage({ characters, eggs, userId = FALLBACK_USER_ID, user, onLogout }: CharacterDetailPageProps) {
   const { characterId } = useParams()
   const fallbackCharacter = characters[0]
 
@@ -42,6 +44,6 @@ export function CharacterDetailPage({ characters, eggs, userId = FALLBACK_USER_I
   return (
 
     // key forces a full re-mount when character or user changes, resetting chat state
-    <CharacterChat key={`${character.id}-${userId}`} character={character} egg={egg} userId={userId} />
+    <CharacterChat key={`${character.id}-${userId}`} character={character} egg={egg} userId={userId} user={user} onLogout={onLogout} />
   )
 }
