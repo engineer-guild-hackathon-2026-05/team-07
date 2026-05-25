@@ -9,8 +9,11 @@ import { AddPassionPage } from './pages/AddPassion'
 import { CharacterDetailPage } from './pages/CharacterDetail'
 import { DevStylePage } from './pages/DevStyle'
 import { ExchangePage } from './pages/Exchange'
+import { ExchangeReceiveByIdPage } from './pages/ExchangeReceiveById'
+import { ExchangeWaitPage } from './pages/ExchangeWait'
 import { HomePage } from './pages/Home'
 import { LoginPage } from './pages/Login'
+import { PassionAiChatPage } from './pages/PassionAiChat'
 import { ProfilePage } from './pages/Profile'
 import type { AppData, User } from './types/models'
 
@@ -118,6 +121,14 @@ function AppContent() {
             }
           />
           <Route
+            path="/passions/:passionId/aichat"
+            element={
+              <RequireAuth user={user}>
+                <PassionAiChatPage userId={user?.uid ?? ''} />
+              </RequireAuth>
+            }
+          />
+          <Route
             path="/exchange/share"
             element={
               <RequireAuth user={user}>
@@ -165,6 +176,22 @@ function AppContent() {
                   userId={currentUid}
                   userName={user?.name ?? 'guest'}
                 />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/exchange/wait/:exchangeId"
+            element={
+              <RequireAuth user={user}>
+                <ExchangeWaitPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/exchange/receive/:exchangeId"
+            element={
+              <RequireAuth user={user}>
+                <ExchangeReceiveByIdPage isAuthenticated={Boolean(user)} />
               </RequireAuth>
             }
           />

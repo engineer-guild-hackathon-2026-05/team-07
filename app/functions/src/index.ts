@@ -14,6 +14,12 @@ type GenerateAiReplyRequest = {
 
 type OpenAIResponsesApiOutput = {
   output_text?: string;
+  output?: Array<{
+    content?: Array<{
+      type?: string;
+      text?: string;
+    }>;
+  }>;
 };
 
 type PromptConfig = {
@@ -71,14 +77,24 @@ async function callOpenAi({
 
   if (!response.ok) {
     const errorBody = await response.text();
+    console.error("OpenAI API request failed", {
+      status: response.status,
+      body: errorBody,
+    });
     throw new HttpsError(
       "internal",
-      `OpenAI API error (${response.status}): ${errorBody}`,
+      "AI応答の生成に失敗しました。",
     );
   }
 
   const json = await response.json() as OpenAIResponsesApiOutput;
-  const reply = json.output_text?.trim();
+  const fallbackText = json.output
+    ?.flatMap((item) => item.content ?? [])
+    .filter((part) => part.type === "output_text" || part.type === "text")
+    .map((part) => part.text ?? "")
+    .join("")
+    .trim();
+  const reply = json.output_text?.trim() || fallbackText;
   if (!reply) {
     throw new HttpsError("internal", "OpenAI API から応答を取得できませんでした。");
   }
@@ -89,6 +105,10 @@ async function callOpenAi({
 export const generateAiReply = onCall(
   {region: "asia-northeast1"},
   async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "認証が必要です。");
+    }
+
     const data = request.data as GenerateAiReplyRequest | undefined;
     const message = data?.message?.trim();
     const promptType = data?.promptType;
@@ -114,6 +134,10 @@ export const generateAiReply = onCall(
 export const generatePassionReply = onCall(
   {region: "asia-northeast1"},
   async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "認証が必要です。");
+    }
+
     const data = request.data as
       | {passionId?: string; message?: string}
       | undefined;
@@ -132,3 +156,6 @@ export const generatePassionReply = onCall(
     return {reply};
   },
 );
+
+export {createUrlExchange} from "./exchange/createUrlExchange";
+export {completeExchange} from "./exchange/completeExchange";

@@ -6,10 +6,10 @@ export function useAddPassion(userId?: string) {
   const submitPassion = useCallback(
     async (input: PassionInput) => {
       if (!userId) {
-        return
+        return ''
       }
 
-      await createPassionInFirestore(input, userId)
+      return createPassionInFirestore(input, userId)
     },
     [userId],
   )

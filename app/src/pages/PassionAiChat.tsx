@@ -1,0 +1,126 @@
+import { useEffect, useState } from 'react'
+import { Link, Navigate, useParams } from 'react-router-dom'
+import { generateAiReply } from '../lib/aiReply'
+import { appendPassionChatHistory, loadPassionChatHistory, type PassionChatMessage } from '../lib/passionRepository'
+
+type PassionAiChatPageProps = {
+  userId: string
+}
+
+export function PassionAiChatPage({ userId }: PassionAiChatPageProps) {
+  const { passionId } = useParams()
+  const [messages, setMessages] = useState<PassionChatMessage[]>([])
+  const [input, setInput] = useState('')
+  const [isSending, setIsSending] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
+
+  useEffect(() => {
+    if (!passionId) {
+      return
+    }
+    loadPassionChatHistory(passionId).then(setMessages).catch(() => setMessages([]))
+  }, [passionId])
+
+  if (!userId) {
+    return <Navigate to="/login" replace />
+  }
+
+  if (!passionId) {
+    return <Navigate to="/passions/new" replace />
+  }
+
+  const sendMessage = async () => {
+    const trimmed = input.trim()
+    if (!trimmed || isSending) {
+      return
+    }
+
+    setIsSending(true)
+    setErrorMessage('')
+
+    const userMessage: PassionChatMessage = {
+      role: 'user',
+      content: trimmed,
+      createdAt: new Date().toISOString(),
+    }
+
+    const nextBase = [...messages, userMessage]
+    setMessages(nextBase)
+    setInput('')
+
+    try {
+      const reply = await generateAiReply({
+        promptType: 'character_making',
+        message: trimmed,
+        context: `passionId=${passionId}`,
+      })
+      const assistantMessage: PassionChatMessage = {
+        role: 'assistant',
+        content: reply,
+        createdAt: new Date().toISOString(),
+      }
+      const nextMessages = [...nextBase, assistantMessage]
+      setMessages(nextMessages)
+      await appendPassionChatHistory(passionId, [userMessage, assistantMessage])
+    } catch {
+      setErrorMessage('AI応答の取得に失敗しました。時間をおいて再試行してください。')
+      setMessages(messages)
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  return (
+    <div className="screen !p-0 flex h-full flex-col bg-[#fffdfb]">
+      <header className="border-b border-[#f1e7dc] px-4 py-3">
+        <p className="text-xs font-bold uppercase tracking-[0.08em] text-[#e77300]">char-02</p>
+        <h1 className="text-lg font-extrabold text-[#1f1f1f]">偏愛AI深掘りチャット</h1>
+        <p className="mt-1 text-xs text-[#737373]">好きな理由を会話で深掘りします。</p>
+      </header>
+
+      <div className="flex-1 space-y-2 overflow-y-auto px-4 py-3">
+        {messages.length === 0 ? (
+          <p className="mt-8 text-center text-sm text-[#8d8d8d]">最初の一言を送って深掘りを始めてください</p>
+        ) : null}
+        {messages.map((message, index) => (
+          <div
+            key={`${message.createdAt}-${index}`}
+            className={`max-w-[78%] rounded-[20px] px-3.5 py-2.5 text-sm leading-relaxed ${
+              message.role === 'user'
+                ? 'ml-auto rounded-br-[6px] bg-[#ff9b37] text-white'
+                : 'rounded-bl-[6px] bg-[#fff1df] text-[#494949]'
+            }`}
+          >
+            {message.content}
+          </div>
+        ))}
+      </div>
+
+      <div className="screen-footer-bar border-t border-[#f1e7dc] bg-white px-3 pb-4 pt-3">
+        <div className="flex gap-2">
+          <input
+            className="flex-1 rounded-2xl border border-[#f1e7dc] px-4 py-3 text-sm outline-none transition focus:border-[#ff9b37] focus:ring-2 focus:ring-[#ff9b37]/20"
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            placeholder="例: どんな時に一番ワクワクするか"
+            disabled={isSending}
+          />
+          <button
+            type="button"
+            onClick={() => void sendMessage()}
+            disabled={isSending}
+            className="rounded-2xl bg-[#ff9b37] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#e77300] disabled:cursor-wait disabled:opacity-70"
+          >
+            送信
+          </button>
+        </div>
+        {errorMessage ? <p className="mt-2 text-xs font-semibold text-[#c2410c]">{errorMessage}</p> : null}
+        <div className="mt-3 flex justify-end">
+          <Link to="/" className="text-xs font-semibold text-[#e77300] underline-offset-2 hover:underline">
+            深掘りを終了してホームに戻る
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
+}
