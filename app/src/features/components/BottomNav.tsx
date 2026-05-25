@@ -16,10 +16,12 @@ const NAV =
   'z-30 fixed left-0 right-0 bottom-0 grid grid-cols-5 gap-1 w-full rounded-t-[20px] px-2.5 pt-2.5 pb-[calc(10px+env(safe-area-inset-bottom,0px))] bg-primary border-t border-[rgba(255,255,255,0.18)] shadow-[0_-10px_28px_rgba(231,115,0,0.22)] md:sticky md:top-0 md:left-auto md:bottom-auto md:flex md:flex-col md:gap-6 md:w-auto md:h-svh md:rounded-none md:px-[18px] md:py-7 md:bg-white md:border-t-0 md:border-r md:border-border md:shadow-none'
 
 const LINK_BASE =
-  'grid place-items-center content-center gap-px h-[50px] rounded-[14px] text-white bg-transparent font-black md:grid-cols-[36px_1fr] md:gap-2.5 md:items-center md:justify-items-start md:h-auto md:min-h-[46px] md:px-3 md:py-2.5 md:rounded-[14px] md:text-text-heading md:text-left'
+  'grid place-items-center content-center gap-px h-[50px] rounded-[14px] bg-transparent font-black md:grid-cols-[36px_1fr] md:gap-2.5 md:items-center md:justify-items-start md:h-auto md:min-h-[46px] md:px-3 md:py-2.5 md:rounded-[14px] md:text-left'
+
+const LINK_INACTIVE = 'text-white md:text-text-heading'
 
 const LINK_ACTIVE =
-  'text-primary-strong bg-white md:bg-[#fff1df] md:shadow-none'
+  'text-primary-strong bg-white shadow-[0_2px_10px_rgba(0,0,0,0.12)] md:bg-[#fff1df] md:shadow-none'
 
 export function BottomNav({ firstCharacterId }: BottomNavProps) {
   const location = useLocation()
@@ -41,7 +43,7 @@ export function BottomNav({ firstCharacterId }: BottomNavProps) {
             <Link
               key={item.path}
               to={path}
-              className={`${LINK_BASE} ${isActive ? LINK_ACTIVE : ''}`.trim()}
+              className={`${LINK_BASE} ${isActive ? LINK_ACTIVE : LINK_INACTIVE}`.trim()}
               aria-label={item.ariaLabel}
               title={item.ariaLabel}
             >
