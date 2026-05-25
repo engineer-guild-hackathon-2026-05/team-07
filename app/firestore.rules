@@ -28,6 +28,32 @@ service cloud.firestore {
       return request.resource.data[field] == resource.data[field];
     }
 
+    function isValidVisibility(value) {
+      return value in ['public', 'friends', 'private'];
+    }
+
+    function isValidPassionBase() {
+      return request.resource.data.keys().hasOnly([
+        'ownerUid',
+        'title',
+        'description',
+        'tags',
+        'embedding',
+        'createdAt',
+        'visibility',
+        'chatHistory',
+      ]) &&
+      request.resource.data.ownerUid is string &&
+      request.resource.data.title is string &&
+      request.resource.data.description is string &&
+      request.resource.data.tags is list &&
+      request.resource.data.embedding is list &&
+      request.resource.data.createdAt is timestamp &&
+      isValidVisibility(request.resource.data.visibility) &&
+      request.resource.data.chatHistory is list &&
+      request.resource.data.chatHistory.size() <= 200;
+    }
+
     // ---------- users/{uid} ----------
     match /users/{uid} {
       allow read:   if isSignedIn();
@@ -43,10 +69,13 @@ service cloud.firestore {
         resource.data.ownerUid == request.auth.uid
       );
       allow create: if isSignedIn()
-                    && request.resource.data.ownerUid == request.auth.uid;
+                    && request.resource.data.ownerUid == request.auth.uid
+                    && isValidPassionBase();
       allow update: if isSignedIn()
                     && resource.data.ownerUid == request.auth.uid
-                    && isUnchanged('ownerUid');
+                    && isUnchanged('ownerUid')
+                    && isUnchanged('createdAt')
+                    && isValidPassionBase();
       allow delete: if isSignedIn()
                     && resource.data.ownerUid == request.auth.uid;
     }
