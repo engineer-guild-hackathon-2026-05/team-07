@@ -159,7 +159,7 @@ export function CharacterChat({ character, egg, userId }: CharacterChatProps) {
   )
 
   return (
-    <div className="screen !p-0 flex flex-col relative">
+    <div className="relative flex flex-col h-full min-h-svh overflow-y-auto box-border [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden md:h-svh md:max-h-svh">
       {/* History button — top right */}
       <button
         type="button"

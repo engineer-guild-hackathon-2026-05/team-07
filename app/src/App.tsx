@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import './App.css'
 import { BottomNav } from './features/components/BottomNav'
 import { useAuth } from './firebase/auth'
 import { getMyCharacters, getMyEggs, getMyPassions, loadAppData, resetDemoData } from './lib/localRepository'
@@ -19,12 +18,12 @@ import type { AppData, User } from './types/models'
 
 function LoadingScreen() {
   return (
-    <main className="app-shell">
-      <div className="app-frame">
-        <div className="login-screen">
-          <section className="login-card">
-            <p className="eyebrow">loading</p>
-            <h1>準備中...</h1>
+    <main className="min-h-svh text-left">
+      <div className="relative min-h-svh overflow-hidden bg-surface">
+        <div className="relative min-h-svh bg-white">
+          <section className="relative z-[1] grid justify-items-center gap-4 w-full px-7 py-12 text-center">
+            <p className="m-0 text-primary-strong text-xs font-extrabold tracking-widest uppercase">loading</p>
+            <h1 className="text-primary font-black tracking-wider text-3xl">準備中...</h1>
           </section>
         </div>
       </div>
@@ -40,6 +39,28 @@ function RequireAuth({ children, user }: { children: ReactNode; user: User | nul
   }
 
   return children
+}
+
+function useLockBodyScroll(locked: boolean) {
+  useEffect(() => {
+    if (!locked) return
+    const html = document.documentElement
+    const body = document.body
+    const prevHtmlOverflow = html.style.overflow
+    const prevHtmlHeight = html.style.height
+    const prevBodyOverflow = body.style.overflow
+    const prevBodyHeight = body.style.height
+    html.style.overflow = 'hidden'
+    html.style.height = '100%'
+    body.style.overflow = 'hidden'
+    body.style.height = '100%'
+    return () => {
+      html.style.overflow = prevHtmlOverflow
+      html.style.height = prevHtmlHeight
+      body.style.overflow = prevBodyOverflow
+      body.style.height = prevBodyHeight
+    }
+  }, [locked])
 }
 
 function AppContent() {
@@ -65,6 +86,8 @@ function AppContent() {
     [data.exchanges, currentUid],
   )
 
+  useLockBodyScroll(Boolean(user) && isAuthReady)
+
   const resetLocalDemo = () => {
     setData(resetDemoData())
     navigate('/')
@@ -79,10 +102,17 @@ function AppContent() {
     return <LoadingScreen />
   }
 
+  const shellClass = user
+    ? 'min-h-svh text-left md:grid md:grid-cols-[240px_minmax(0,1fr)]'
+    : 'min-h-auto text-left overflow-visible'
+  const frameClass = user
+    ? 'relative min-h-svh overflow-hidden bg-surface md:min-h-svh md:overflow-hidden'
+    : 'relative min-h-auto h-auto overflow-visible bg-surface'
+
   return (
-    <main className={`app-shell${user ? ' app-shell--authenticated' : ''}`}>
+    <main className={shellClass}>
       {user ? <BottomNav firstCharacterId={characters[0]?.id} /> : null}
-      <div className="app-frame">
+      <div className={frameClass}>
         <Routes>
           <Route
             path="/login"
