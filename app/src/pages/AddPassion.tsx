@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card } from '../components/ui'
 import { AddPassionForm, useAddPassion } from '../features/charcter_making'
@@ -10,13 +11,20 @@ type AddPassionPageProps = {
 export function AddPassionPage({ userId }: AddPassionPageProps) {
   const navigate = useNavigate()
   const { submitPassion } = useAddPassion(userId)
+  const [errorMessage, setErrorMessage] = useState('')
 
   const handleSubmit = async (input: PassionInput) => {
-    const passionId = await submitPassion(input)
-    if (!passionId) {
-      return
+    setErrorMessage('')
+    try {
+      const passionId = await submitPassion(input)
+      if (!passionId) {
+        setErrorMessage('ログイン状態を確認してください。')
+        return
+      }
+      navigate(`/passions/${passionId}/aichat`)
+    } catch {
+      setErrorMessage('保存に失敗しました。Firestoreルールとログイン状態を確認してください。')
     }
-    navigate(`/passions/${passionId}/aichat`)
   }
 
   return (
@@ -27,7 +35,7 @@ export function AddPassionPage({ userId }: AddPassionPageProps) {
         <p>好きなポイントを入力すると、ローカルの仮ロジックで卵とキャラを生成します。</p>
       </Card>
 
-      <AddPassionForm onSubmit={handleSubmit} />
+      <AddPassionForm onSubmit={handleSubmit} errorMessage={errorMessage} />
     </div>
   )
 }
