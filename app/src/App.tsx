@@ -67,10 +67,6 @@ function AppContent() {
     navigate('/')
   }
 
-  const handleCreated = (nextData: AppData) => {
-    setData(nextData)
-  }
-
   const handleLogout = async () => {
     await signOut()
     navigate('/login', { replace: true })
@@ -117,7 +113,7 @@ function AppContent() {
             path="/passions/new"
             element={
               <RequireAuth user={user}>
-                <AddPassionPage onCreated={handleCreated} userId={user?.uid ?? ''} />
+                <AddPassionPage userId={user?.uid ?? ''} />
               </RequireAuth>
             }
           />

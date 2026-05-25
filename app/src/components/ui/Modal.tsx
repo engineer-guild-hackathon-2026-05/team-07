@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import { Button } from './Button'
 
 type ModalProps = {
   children: ReactNode
@@ -24,9 +23,14 @@ export function Modal({ children, isOpen, onClose, title }: ModalProps) {
       >
         <div className="section-title-row">
           <h2 id="modal-title">{title}</h2>
-          <Button type="button" variant="ghost" onClick={onClose}>
-            閉じる
-          </Button>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="閉じる"
+            className="w-8 h-8 flex items-center justify-center rounded-full text-[#494949] hover:text-[#1f1f1f] hover:bg-[#f1e7dc] transition-colors text-lg font-bold leading-none border-none bg-transparent cursor-pointer"
+          >
+            ×
+          </button>
         </div>
         {children}
       </section>
