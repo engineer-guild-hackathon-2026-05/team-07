@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Character, Chat, ChatMessage, Egg } from '../types/models'
 import { CharacterAvatar, ChatBubble, ChatInput } from '../features/character-growing'
 import { generateAiReply } from '../lib/aiReply'
+import { fetchChatMessages, sendMessageToCharacter } from '../lib/chatRepository'
+import { auth } from '../firebase/firebase'
 import { Modal } from './ui'
 
 // ---------------------------------------------------------------------------
@@ -91,6 +93,19 @@ export function CharacterChat({ character, egg, userId }: CharacterChatProps) {
       },
   )
 
+  // Firestore からメッセージ履歴を初回ロード（認証ユーザーのみ）
+  useEffect(() => {
+    const firebaseUser = auth.currentUser
+    if (!firebaseUser) return
+    fetchChatMessages(character.id, firebaseUser.uid)
+      .then((messages) => {
+        if (messages.length > 0) {
+          setChat((prev) => ({ ...prev, messages }))
+        }
+      })
+      .catch(() => {})
+  }, [character.id])
+
   // Fade out reply bubble 3s after it appears, remove from DOM at 4.2s
   useEffect(() => {
     if (!lastCharReply) return
@@ -130,13 +145,22 @@ export function CharacterChat({ character, egg, userId }: CharacterChatProps) {
 
       let replyText = ''
       try {
-        replyText = await generateAiReply({
-          promptType: 'character_growing',
-          message: trimmed,
-          context: `characterName=${character.name}; personality=${character.personality}; knowledgeAreas=${character.knowledgeAreas.join(',')}`,
-        })
+        const firebaseUser = auth.currentUser
+        if (firebaseUser) {
+          // 認証ユーザー: sendMessage callable（履歴・キャラクタープロンプト込み）
+          replyText = await sendMessageToCharacter({
+            characterId: character.id,
+            userMessage: trimmed,
+          })
+        } else {
+          // 非認証（デモ）: generateAiReply でコンテキストのみ渡す
+          replyText = await generateAiReply({
+            promptType: 'character_growing',
+            message: trimmed,
+            context: `characterName=${character.name}; personality=${character.personality}; knowledgeAreas=${character.knowledgeAreas.join(',')}`,
+          })
+        }
       } catch {
-        // Fallback for local/dev cases where functions are unreachable.
         replyText = buildMockReply(character, trimmed)
       }
 
