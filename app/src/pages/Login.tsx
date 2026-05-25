@@ -2,24 +2,6 @@ import { Navigate } from 'react-router-dom'
 import loginHeroGif from '../assets/login-hero.gif'
 import type { User } from '../types/models'
 
-const LOGIN_FEATURES = [
-  {
-    step: '01',
-    title: '偏愛を登録する',
-    description: '好きなもの・こだわりを自由に書き込み。AIとの対話で、あなたらしい「偏愛」を言葉にしていきます。',
-  },
-  {
-    step: '02',
-    title: '卵からキャラが生まれる',
-    description: '登録した偏愛から、世界にひとつだけのキャラクター（卵）が誕生。好きが形になって現れます。',
-  },
-  {
-    step: '03',
-    title: '交換して育てる',
-    description: 'QRやURLで卵を渡し合い、チャットで会話を重ねながら親密度を上げ、キャラを成長させましょう。',
-  },
-] as const
-
 type LoginPageProps = {
   authError: string
   isLoading: boolean
@@ -156,32 +138,6 @@ export function LoginPage({
           <p className="text-center text-[12px] font-medium text-[#E77300] mt-1">{authError}</p>
         ) : null}
       </div>
-
-      {/* How it works */}
-      <section className="mt-8" aria-labelledby="login-features-heading">
-        <h2
-          id="login-features-heading"
-          className="text-center text-[11px] font-bold tracking-[0.16em] text-[#8A8A8A] uppercase mb-3"
-        >
-          How it works
-        </h2>
-        <ul className="flex flex-col gap-2.5">
-          {LOGIN_FEATURES.map((feature) => (
-            <li
-              key={feature.step}
-              className="bg-[#FFFCF4] border border-[#E5E5E5] rounded-2xl px-4 py-3 flex gap-3 shadow-[0_1px_0_rgba(80,50,30,0.04),0_2px_6px_rgba(80,50,30,0.06)]"
-            >
-              <span className="shrink-0 w-8 h-8 rounded-full bg-[#FFE9D2] text-[#E77300] text-[11px] font-bold flex items-center justify-center">
-                {feature.step}
-              </span>
-              <div>
-                <h3 className="text-[13px] font-bold text-[#494949]">{feature.title}</h3>
-                <p className="text-[11px] text-[#5C5C5C] mt-1 leading-relaxed">{feature.description}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </section>
     </div>
   )
 }

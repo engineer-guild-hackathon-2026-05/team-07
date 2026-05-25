@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { BottomNav } from './features/components/BottomNav'
 import { useAuth } from './firebase/auth'
@@ -41,28 +41,6 @@ function RequireAuth({ children, user }: { children: ReactNode; user: User | nul
   return children
 }
 
-function useLockBodyScroll(locked: boolean) {
-  useEffect(() => {
-    if (!locked) return
-    const html = document.documentElement
-    const body = document.body
-    const prevHtmlOverflow = html.style.overflow
-    const prevHtmlHeight = html.style.height
-    const prevBodyOverflow = body.style.overflow
-    const prevBodyHeight = body.style.height
-    html.style.overflow = 'hidden'
-    html.style.height = '100%'
-    body.style.overflow = 'hidden'
-    body.style.height = '100%'
-    return () => {
-      html.style.overflow = prevHtmlOverflow
-      html.style.height = prevHtmlHeight
-      body.style.overflow = prevBodyOverflow
-      body.style.height = prevBodyHeight
-    }
-  }, [locked])
-}
-
 function AppContent() {
   const navigate = useNavigate()
   const [data, setData] = useState<AppData>(loadAppData)
@@ -85,8 +63,6 @@ function AppContent() {
     () => data.exchanges.filter((exchange) => exchange.fromUid === currentUid || exchange.toUid === currentUid),
     [data.exchanges, currentUid],
   )
-
-  useLockBodyScroll(Boolean(user) && isAuthReady)
 
   const handleLogout = async () => {
     await signOut()
