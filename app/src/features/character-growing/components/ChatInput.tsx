@@ -18,10 +18,7 @@ export function ChatInput({ onSend, disabled }: Props) {
   const canSend = value.trim().length > 0 && !disabled
 
   return (
-    <form
-      className="absolute left-0 right-0 bottom-[104px] flex items-center gap-2 px-4 z-10"
-      onSubmit={handleSubmit}
-    >
+    <form className="chat-input-bar" onSubmit={handleSubmit}>
       <input
         className={`flex-1 border rounded-full px-4 py-2.5 text-sm text-[#1f1f1f] bg-white outline-none shadow-sm transition-colors ${
           disabled

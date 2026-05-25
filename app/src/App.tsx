@@ -3,7 +3,6 @@ import { useMemo, useState } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import './App.css'
 import { BottomNav } from './features/components/BottomNav'
-import { Button } from './components/ui'
 import { useAuth } from './firebase/auth'
 import { getMyCharacters, getMyEggs, getMyPassions, loadAppData, resetDemoData } from './lib/localRepository'
 import { AddPassionPage } from './pages/AddPassion'
@@ -18,7 +17,7 @@ import type { AppData, User } from './types/models'
 function LoadingScreen() {
   return (
     <main className="app-shell">
-      <div className="phone-frame">
+      <div className="app-frame">
         <div className="login-screen">
           <section className="login-card">
             <p className="eyebrow">loading</p>
@@ -78,8 +77,9 @@ function AppContent() {
   }
 
   return (
-    <main className="app-shell">
-      <div className="phone-frame">
+    <main className={`app-shell${user ? ' app-shell--authenticated' : ''}`}>
+      {user ? <BottomNav firstCharacterId={characters[0]?.id} /> : null}
+      <div className="app-frame">
         <Routes>
           <Route
             path="/login"
@@ -121,7 +121,16 @@ function AppContent() {
             path="/exchange/share"
             element={
               <RequireAuth user={user}>
-                <ExchangePage eggs={eggs} exchanges={exchanges} />
+                <ExchangePage
+                  allEggs={data.eggs}
+                  allPassions={data.passions}
+                  characters={data.characters}
+                  eggs={eggs}
+                  exchanges={exchanges}
+                  onDataChange={setData}
+                  userId={currentUid}
+                  userName={user?.name ?? 'guest'}
+                />
               </RequireAuth>
             }
           />
@@ -129,7 +138,33 @@ function AppContent() {
             path="/exchange/scan"
             element={
               <RequireAuth user={user}>
-                <ExchangePage eggs={eggs} exchanges={exchanges} />
+                <ExchangePage
+                  allEggs={data.eggs}
+                  allPassions={data.passions}
+                  characters={data.characters}
+                  eggs={eggs}
+                  exchanges={exchanges}
+                  onDataChange={setData}
+                  userId={currentUid}
+                  userName={user?.name ?? 'guest'}
+                />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/exchange/receive"
+            element={
+              <RequireAuth user={user}>
+                <ExchangePage
+                  allEggs={data.eggs}
+                  allPassions={data.passions}
+                  characters={data.characters}
+                  eggs={eggs}
+                  exchanges={exchanges}
+                  onDataChange={setData}
+                  userId={currentUid}
+                  userName={user?.name ?? 'guest'}
+                />
               </RequireAuth>
             }
           />
@@ -174,18 +209,7 @@ function AppContent() {
           />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-        {user ? <BottomNav firstCharacterId={characters[0]?.id} /> : null}
       </div>
-      <aside className="desktop-note">
-        <p className="eyebrow">UI/UX Local MVP</p>
-        <h2>課金なしで確認できる接続前UI</h2>
-        <p>FirestoreやFunctionsへは接続せず、UIはlocalStorageで確認できます。</p>
-        {user ? (
-          <Button type="button" variant="secondary" onClick={() => navigate('/dev/style')}>
-            Design Systemを見る
-          </Button>
-        ) : null}
-      </aside>
     </main>
   )
 }

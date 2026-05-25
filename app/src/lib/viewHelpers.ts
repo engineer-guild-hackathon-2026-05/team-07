@@ -1,4 +1,4 @@
-import type { Character, Egg } from '../types/models'
+import type { Character, Egg, Passion } from '../types/models'
 
 export const formatShortDate = (value: string) =>
   new Intl.DateTimeFormat('ja-JP', {
@@ -15,3 +15,9 @@ export const formatFullDate = (value: string) =>
 
 export const getEggForCharacter = (eggs: Egg[], character: Character) =>
   eggs.find((egg) => egg.id === character.eggId)
+
+export const getPassionForEgg = (passions: Passion[], egg: Egg) =>
+  passions.find((passion) => egg.basedOnPassionIds.includes(passion.id))
+
+export const getCharacterForEgg = (characters: Character[], egg: Egg) =>
+  characters.find((character) => character.eggId === egg.id)

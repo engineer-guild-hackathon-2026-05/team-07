@@ -40,6 +40,7 @@ export function CharacterDetailPage({ characters, eggs, userId = FALLBACK_USER_I
   }
 
   return (
+
     // key forces a full re-mount when character or user changes, resetting chat state
     <CharacterChat key={`${character.id}-${userId}`} character={character} egg={egg} userId={userId} />
   )

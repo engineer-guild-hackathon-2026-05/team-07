@@ -32,6 +32,16 @@ const samplePassion: Passion = {
   visibility: 'public',
 }
 
+const guestPassion: Passion = {
+  id: 'passion-guest-travel',
+  ownerUid: 'guest-user',
+  title: '旅先の朝市',
+  description: '土地の人の会話と、朝の匂いがセットで好き。',
+  tags: ['旅', '朝', '市場'],
+  createdAt: now(),
+  visibility: 'public',
+}
+
 const sampleEgg: Egg = {
   id: 'egg-sample-radio',
   sourceUserUid: CURRENT_USER_ID,
@@ -46,6 +56,45 @@ const sampleEgg: Egg = {
   motif: 'fox',
 }
 
+const sampleEggBlue: Egg = {
+  id: 'egg-sample-cafe',
+  sourceUserUid: CURRENT_USER_ID,
+  basedOnPassionIds: ['passion-sample-cafe'],
+  characterPrompt: 'カフェの香りと静けさを大切にする、のんびりした聞き手。',
+  hatchLevel: 62,
+  createdAt: now(),
+  currentOwnerUid: CURRENT_USER_ID,
+  name: 'ソラネ',
+  color: '#4EDBFB',
+  motif: 'cat',
+}
+
+const sampleEggPurple: Egg = {
+  id: 'egg-sample-stationery',
+  sourceUserUid: CURRENT_USER_ID,
+  basedOnPassionIds: ['passion-sample-stationery'],
+  characterPrompt: '文房具の手触りや色の組み合わせに詳しい、丁寧な相棒。',
+  hatchLevel: 55,
+  createdAt: now(),
+  currentOwnerUid: CURRENT_USER_ID,
+  name: 'ムラサキ',
+  color: '#d9c8ff',
+  motif: 'bird',
+}
+
+const guestGiftEgg: Egg = {
+  id: 'egg-guest-gift',
+  sourceUserUid: 'guest-user',
+  basedOnPassionIds: [guestPassion.id],
+  characterPrompt: '旅先の朝市の空気感を大切にする、のんびりした案内役。',
+  hatchLevel: 51,
+  createdAt: now(),
+  currentOwnerUid: 'guest-user',
+  name: 'タビトル',
+  color: '#d9c8ff',
+  motif: 'bird',
+}
+
 const sampleCharacter: Character = {
   id: 'character-sample-radio',
   eggId: sampleEgg.id,
@@ -55,6 +104,39 @@ const sampleCharacter: Character = {
   growthLevel: 2,
   affinityScore: 68,
   unlockedTopics: ['好きになったきっかけ', 'こだわりの専門用語'],
+}
+
+const sampleCharacterBlue: Character = {
+  id: 'character-sample-cafe',
+  eggId: sampleEggBlue.id,
+  name: 'ソラネ',
+  personality: 'カフェの空気感を言葉にして、落ち着いた会話を重ねる。',
+  knowledgeAreas: ['カフェ', 'コーヒー', '読書'],
+  growthLevel: 3,
+  affinityScore: 74,
+  unlockedTopics: ['お気に入りの席', '香りのこだわり'],
+}
+
+const sampleCharacterPurple: Character = {
+  id: 'character-sample-stationery',
+  eggId: sampleEggPurple.id,
+  name: 'ムラサキ',
+  personality: '文房具の細部に目が行き、こだわりを一つずつ拾い上げる。',
+  knowledgeAreas: ['文房具', 'ノート', 'ペン'],
+  growthLevel: 2,
+  affinityScore: 61,
+  unlockedTopics: ['最初に惹かれた一点', '手触りの好み'],
+}
+
+const guestGiftCharacter: Character = {
+  id: 'character-guest-gift',
+  eggId: guestGiftEgg.id,
+  name: 'タビトル',
+  personality: '旅先の朝の匂いを聞くと、土地の話を少しずつ引き出してくれる。',
+  knowledgeAreas: ['旅', '朝', '市場'],
+  growthLevel: 1,
+  affinityScore: 54,
+  unlockedTopics: ['好きな朝の過ごし方', '旅の思い出'],
 }
 
 const sampleExchange = {
@@ -68,9 +150,9 @@ const sampleExchange = {
 
 const sampleData: AppData = {
   users: [currentUser],
-  passions: [samplePassion],
-  eggs: [sampleEgg],
-  characters: [sampleCharacter],
+  passions: [samplePassion, guestPassion],
+  eggs: [sampleEgg, sampleEggBlue, sampleEggPurple, guestGiftEgg],
+  characters: [sampleCharacter, sampleCharacterBlue, sampleCharacterPurple, guestGiftCharacter],
   exchanges: [sampleExchange],
   chats: [],
 }
@@ -179,5 +261,37 @@ export const createPassion = (input: PassionInput, uid = CURRENT_USER_ID) => {
     passions: [passion, ...data.passions],
     eggs: [egg, ...data.eggs],
     characters: [character, ...data.characters],
+  })
+}
+
+export const receiveEggLocally = (eggId: string, toUid: string, meetingContext: string) => {
+  const data = readData()
+  const egg = data.eggs.find((item) => item.id === eggId)
+
+  if (!egg) {
+    return null
+  }
+
+  if (egg.currentOwnerUid === toUid) {
+    return data
+  }
+
+  const exchange = {
+    id: createId('exchange'),
+    fromUid: egg.currentOwnerUid,
+    toUid,
+    eggId,
+    createdAt: now(),
+    meetingContext,
+  }
+
+  const eggs = data.eggs.map((item) =>
+    item.id === eggId ? { ...item, currentOwnerUid: toUid } : item,
+  )
+
+  return writeData({
+    ...data,
+    eggs,
+    exchanges: [exchange, ...data.exchanges],
   })
 }

@@ -4,6 +4,7 @@ import { Card, EmptyState, Button } from '../components/ui'
 import { CharacterCard } from '../features/components/CharacterCard'
 import { EggCard } from '../features/components/EggCard'
 import { HeaderBar } from '../features/components/HeaderBar'
+import { charactersBg } from '../lib/characterAssets'
 import { formatShortDate, getEggForCharacter } from '../lib/viewHelpers'
 import type { Character, Egg, Exchange, Passion, User } from '../types/models'
 
@@ -27,6 +28,11 @@ export function HomePage({ characters, eggs, exchanges, onReset, passions, user 
 
   return (
     <div className="screen home-screen">
+      <div className="home-scene-banner" aria-hidden>
+        <img src={charactersBg} alt="" className="home-scene-banner__image" />
+        <div className="home-scene-banner__fade" />
+      </div>
+
       <HeaderBar
         title="偏愛の卵"
         subtitle={`${user.name}さんのホーム`}

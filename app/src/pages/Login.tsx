@@ -1,6 +1,7 @@
 import { Navigate } from 'react-router-dom'
 import { Button } from '../components/ui'
-import { Mascot } from '../features/components/Mascot'
+import { CharacterIllustration } from '../features/components/CharacterIllustration'
+import { charThree, charactersBg } from '../lib/characterAssets'
 import type { User } from '../types/models'
 
 type LoginPageProps = {
@@ -26,13 +27,21 @@ export function LoginPage({
 
   return (
     <div className="login-screen">
+      <div className="login-scene" aria-hidden>
+        <img src={charactersBg} alt="" className="login-scene__bg" />
+        <div className="login-scene__fade" />
+      </div>
+
       <section className="login-card">
         <p className="eyebrow">偏愛キャラクター育成アプリ</p>
         <h1>HenAi Egg</h1>
-        <div className="login-mascots" aria-label="サービスのキャラクター">
-          <Mascot size="small" egg={{ color: '#d9c8ff' }} />
-          <Mascot size="small" egg={{ color: '#ffb6d9' }} />
-          <Mascot size="small" egg={{ color: '#ffe1a8' }} />
+        <div className="login-hero-art" aria-label="サービスのキャラクター">
+          <img src={charThree} alt="" className="login-hero-art__group" />
+          <div className="login-hero-art__cast">
+            <CharacterIllustration egg={{ motif: 'cat', color: '#4EDBFB', id: 'login-blue', name: 'そら' }} size="small" />
+            <CharacterIllustration egg={{ motif: 'fox', color: '#ffb6d9', id: 'login-pink', name: 'もも' }} size="small" />
+            <CharacterIllustration egg={{ motif: 'bird', color: '#d9c8ff', id: 'login-purple', name: 'ゆめ' }} size="small" />
+          </div>
         </div>
 
         <div className="login-actions">
