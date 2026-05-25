@@ -1,28 +1,25 @@
+@reference "tailwindcss";
+
 :root {
   --mobile-nav-height: 70px;
 }
 
-.app-shell {
-  min-height: 100svh;
-  text-align: left;
-}
+@layer components {
+  .app-shell {
+    @apply min-h-svh text-left;
+  }
 
-.app-frame {
-  position: relative;
-  min-height: 100svh;
-  overflow: hidden;
-  background: var(--surface);
-}
+  .app-frame {
+    @apply relative min-h-svh overflow-hidden bg-[var(--surface)];
+  }
 
-.app-shell:not(.app-shell--authenticated) {
-  min-height: auto;
-  overflow: visible;
-}
+  .app-shell:not(.app-shell--authenticated) {
+    @apply min-h-auto overflow-visible;
+  }
 
-.app-shell:not(.app-shell--authenticated) .app-frame {
-  overflow: visible;
-  min-height: auto;
-  height: auto;
+  .app-shell:not(.app-shell--authenticated) .app-frame {
+    @apply overflow-visible min-h-auto h-auto;
+  }
 }
 
 html:has(.app-shell:not(.app-shell--authenticated)),
@@ -52,19 +49,17 @@ body:has(.app-shell--authenticated) #root {
   height: 100%;
 }
 
-.app-shell--authenticated {
-  height: 100%;
-  min-height: 100svh;
-}
+@layer components {
+  .app-shell--authenticated {
+    @apply h-full min-h-svh;
+  }
 
-.screen {
-  height: 100%;
-  min-height: 100svh;
-  overflow-y: auto;
-  box-sizing: border-box;
-  padding: 28px 22px calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px) + 20px);
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  .screen {
+    @apply h-full min-h-svh overflow-y-auto box-border pt-[28px] pr-[22px] pl-[22px];
+    padding-bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px) + 20px);
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
 }
 
 .screen::-webkit-scrollbar {
@@ -73,16 +68,14 @@ body:has(.app-shell--authenticated) #root {
   height: 0;
 }
 
-.screen-form {
-  display: grid;
-  gap: 16px;
-}
+@layer components {
+  .screen-form {
+    @apply grid gap-4;
+  }
 
-.login-screen {
-  position: relative;
-  min-height: 100svh;
-  overflow-x: clip;
-  background: #dff6fb;
+  .login-screen {
+    @apply relative min-h-svh overflow-x-clip bg-[#dff6fb];
+  }
 }
 
 .login-cinematic {
