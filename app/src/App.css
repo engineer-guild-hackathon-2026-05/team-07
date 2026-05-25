@@ -138,7 +138,7 @@
   font-weight: 900;
 }
 
-.google-login-button {
+.stacked-action-button {
   display: grid;
   grid-template-columns: 42px 1fr;
   gap: 10px;
@@ -146,40 +146,56 @@
   width: 100%;
   min-height: 58px;
   border: 1px solid #e5e5e5;
-  border-radius: 8px;
-  padding: 8px 12px;
+  border-radius: 16px;
+  padding: 10px 14px;
   background: white;
   color: var(--text-h);
   box-shadow: 0 3px 10px rgba(73, 73, 73, 0.1);
   text-align: left;
   cursor: pointer;
+  font: inherit;
 }
 
-.google-login-button:disabled,
+.stacked-action-button:disabled,
 .ui-button:disabled {
   opacity: 0.6;
   cursor: wait;
 }
 
-.google-avatar {
+.stacked-action-button__icon {
   display: grid;
   place-items: center;
   width: 34px;
   height: 34px;
   border-radius: 999px;
-  color: #4285f4;
-  background: #f8f8f8;
   font-weight: 900;
 }
 
-.google-login-button strong,
-.google-login-button small {
+.stacked-action-button__icon--default {
+  color: #4285f4;
+  background: #f8f8f8;
+}
+
+.stacked-action-button__icon--line {
+  color: white;
+  background: #06c755;
+}
+
+.stacked-action-button--line {
+  border: 1px solid rgba(6, 199, 85, 0.18);
+  background: #f3fff8;
+  box-shadow: var(--shadow-soft);
+}
+
+.stacked-action-button strong,
+.stacked-action-button small {
   display: block;
   line-height: 1.25;
 }
 
-.google-login-button small {
+.stacked-action-button small {
   color: #777;
+  font-size: 12px;
 }
 
 .demo-login-note {
@@ -836,51 +852,6 @@
 .share-action-grid {
   display: grid;
   gap: 10px;
-}
-
-.share-action-button {
-  display: grid;
-  grid-template-columns: 42px 1fr;
-  gap: 10px;
-  align-items: center;
-  width: 100%;
-  min-height: 58px;
-  border: none;
-  border-radius: 16px;
-  padding: 10px 14px;
-  background: white;
-  color: var(--text-h);
-  box-shadow: var(--shadow-soft);
-  text-align: left;
-  cursor: pointer;
-  font: inherit;
-}
-
-.share-action-button strong,
-.share-action-button small {
-  display: block;
-  line-height: 1.25;
-}
-
-.share-action-button small {
-  color: #777;
-  font-size: 12px;
-}
-
-.share-action-button__icon {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 999px;
-  color: white;
-  background: #06c755;
-  font-weight: 900;
-}
-
-.share-action-button--line {
-  border: 1px solid rgba(6, 199, 85, 0.18);
-  background: #f3fff8;
 }
 
 .exchange-duo {
@@ -1674,7 +1645,7 @@
     align-items: stretch;
   }
 
-  .share-action-button {
+  .stacked-action-button {
     min-height: 100%;
   }
 

@@ -20,7 +20,7 @@ export function AddPassionPage({ userId }: AddPassionPageProps) {
   }
 
   return (
-    <div className="screen">
+    <div className="screen screen-form">
       <Card className="add-intro">
         <p className="eyebrow">char-01</p>
         <h1>偏愛をことばにする</h1>

@@ -1,7 +1,7 @@
 import type { FormEvent } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { Button, Card, TextField, Textarea } from '../components/ui'
+import { Button, Card, StackedActionButton, TextField, Textarea } from '../components/ui'
 import { ExchangePreviewCard } from '../features/components/ExchangePreviewCard'
 import { EggArt } from '../features/components/EggArt'
 import {
@@ -369,13 +369,13 @@ export function ExchangePage({
               </div>
 
               <div className="share-action-grid">
-                <button type="button" className="share-action-button share-action-button--line" onClick={handleLineShare}>
-                  <span className="share-action-button__icon">L</span>
-                  <span>
-                    <strong>LINEで渡す</strong>
-                    <small>偏愛つきメッセージをそのまま送れます</small>
-                  </span>
-                </button>
+                <StackedActionButton
+                  icon="L"
+                  title="LINEで渡す"
+                  description="偏愛つきメッセージをそのまま送れます"
+                  variant="line"
+                  onClick={handleLineShare}
+                />
 
                 <Button type="button" variant="secondary" onClick={handleCopyShare}>
                   文面をコピー

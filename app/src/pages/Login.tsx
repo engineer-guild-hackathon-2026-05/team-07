@@ -1,7 +1,8 @@
 import { Navigate } from 'react-router-dom'
-import { Button } from '../components/ui'
+import { Button, StackedActionButton } from '../components/ui'
 import { CharacterIllustration } from '../features/components/CharacterIllustration'
-import { charThree, charactersBg } from '../lib/characterAssets'
+import { charactersBg } from '../lib/characterAssets'
+import loginHeroGif from '../assets/login-hero.gif'
 import type { User } from '../types/models'
 
 type LoginPageProps = {
@@ -36,7 +37,7 @@ export function LoginPage({
         <p className="eyebrow">偏愛キャラクター育成アプリ</p>
         <h1>HenAi Egg</h1>
         <div className="login-hero-art" aria-label="サービスのキャラクター">
-          <img src={charThree} alt="" className="login-hero-art__group" />
+          <img src={loginHeroGif} alt="" className="login-hero-art__group" />
           <div className="login-hero-art__cast">
             <CharacterIllustration egg={{ motif: 'cat', color: '#4EDBFB', id: 'login-blue', name: 'そら' }} size="small" />
             <CharacterIllustration egg={{ motif: 'fox', color: '#ffb6d9', id: 'login-pink', name: 'もも' }} size="small" />
@@ -46,13 +47,13 @@ export function LoginPage({
 
         <div className="login-actions">
           <span>Google login</span>
-          <button type="button" className="google-login-button" onClick={onGoogleLogin} disabled={isLoading}>
-            <span className="google-avatar">G</span>
-            <span>
-              <strong>Sign in with Google</strong>
-              <small>ログイン状態とusers作成を確認</small>
-            </span>
-          </button>
+          <StackedActionButton
+            icon="G"
+            title="Sign in with Google"
+            description="ログイン状態とusers作成を確認"
+            onClick={onGoogleLogin}
+            disabled={isLoading}
+          />
           <Button type="button" variant="secondary" onClick={onAnonymousLogin} disabled={isLoading}>
             ゲストではじめる
           </Button>
