@@ -12,6 +12,11 @@ type OpenAIResponsesOutput = {
   output_text?: string;
 };
 
+type InterviewTurn = {
+  question: string;
+  choices: string[];
+};
+
 type StartInterviewInput = { passionId: string };
 type ContinueInterviewInput = { passionId: string; userMessage: string };
 type FinalizeInterviewInput = { passionId: string };
@@ -55,6 +60,22 @@ async function callOpenAi(input: Array<{ role: "system" | "user" | "assistant"; 
   return text;
 }
 
+function parseInterviewTurn(text: string): InterviewTurn {
+  try {
+    const parsed = JSON.parse(text) as { question?: unknown; choices?: unknown };
+    const question = typeof parsed.question === "string" ? parsed.question.trim() : "";
+    const choices = Array.isArray(parsed.choices)
+      ? parsed.choices.filter((v): v is string => typeof v === "string").map((v) => v.trim()).filter((v) => v.length > 0).slice(0, 3)
+      : [];
+    if (question) {
+      return { question, choices };
+    }
+  } catch {
+    // fallback below
+  }
+  return { question: text.trim(), choices: [] };
+}
+
 async function getPassionOrThrow(uid: string, passionId: string) {
   const passionRef = db.collection(COLLECTIONS.PASSIONS).doc(passionId);
   const snap = await passionRef.get();
@@ -94,17 +115,18 @@ export const startPassionInterview = onCall(
       };
     }
 
-    const assistantText = await callOpenAi([
+    const assistantRaw = await callOpenAi([
       {
         role: "system",
         content:
-          "あなたは偏愛インタビュアーです。ユーザーの偏愛対象の魅力を抽出するため、短く具体的な質問を1つ返してください。",
+          "あなたは偏愛インタビュアーです。ユーザーの偏愛対象の魅力を抽出するため、短く具体的な質問を1つ作り、回答候補を3つ提案してください。JSONのみで返答: {\"question\":\"...\",\"choices\":[\"...\",\"...\",\"...\"]}",
       },
       {
         role: "user",
         content: `この偏愛の最初の質問を作ってください。\n${overview}`,
       },
     ]);
+    const assistantTurn = parseInterviewTurn(assistantRaw);
 
     await db.runTransaction(async (tx) => {
       tx.set(
@@ -114,14 +136,15 @@ export const startPassionInterview = onCall(
       );
       tx.set(messagesRef.doc(), {
         role: "assistant",
-        content: assistantText,
+        content: assistantTurn.question,
         createdAt: FieldValue.serverTimestamp(),
       });
     });
 
     return {
       overview,
-      messages: [{ role: "assistant", content: assistantText, createdAt: new Date().toISOString() }],
+      messages: [{ role: "assistant", content: assistantTurn.question, createdAt: new Date().toISOString() }],
+      choices: assistantTurn.choices,
     };
   },
 );
@@ -150,25 +173,26 @@ export const continuePassionInterview = onCall(
       return { role: msg.role, content: msg.content };
     });
 
-    const assistantText = await callOpenAi([
+    const assistantRaw = await callOpenAi([
       {
         role: "system",
         content:
-          "あなたは偏愛インタビュアーです。偏愛対象の魅力が具体化するように、自然な日本語で質問を1つ返してください。",
+          "あなたは偏愛インタビュアーです。偏愛対象の魅力が具体化するように質問を1つ返し、回答候補を3つ提案してください。JSONのみで返答: {\"question\":\"...\",\"choices\":[\"...\",\"...\",\"...\"]}",
       },
       { role: "user", content: `偏愛概要:\n${overview}` },
       ...history,
       { role: "user", content: userMessage },
     ]);
+    const assistantTurn = parseInterviewTurn(assistantRaw);
 
     const now = FieldValue.serverTimestamp();
     const batch = db.batch();
     batch.set(messagesRef.doc(), { role: "user", content: userMessage, createdAt: now });
-    batch.set(messagesRef.doc(), { role: "assistant", content: assistantText, createdAt: now });
+    batch.set(messagesRef.doc(), { role: "assistant", content: assistantTurn.question, createdAt: now });
     batch.set(passionRef, { overview, makingStatus: "interviewing" }, { merge: true });
     await batch.commit();
 
-    return { reply: assistantText };
+    return { reply: assistantTurn.question, choices: assistantTurn.choices };
   },
 );
 
