@@ -8,24 +8,24 @@
 
 | メイン画面 | 主要機能 |
 |---|---|
-| `docs/screenshot-main.png` を貼る | `docs/screenshot-feature.png` を貼る |
+| <img width="537" height="757" alt="Image" src="https://github.com/user-attachments/assets/1fba9e79-bba5-4c11-8602-48fd154cd56b" /> | <img width="517" height="757" alt="Image" src="https://github.com/user-attachments/assets/8ef2d581-a750-41f3-b90b-b8f217def8ec" /> |
 
 ## チーム情報
 
 | 項目 | 内容 |
 |---|---|
-| チーム名 | （ここに記入） |
-| プロダクト名 | （Day1 確定時に記入） |
-| 担当メンター | （Day1 開始時に運営から通知される） |
+| チーム名 | 大事にしてね |
+| プロダクト名 | Aicoにっち |
+| 担当メンター | Pyonさん |
 
 ### メンバー
 
 | GitHub | 氏名 | 大学 / 学部 | 担当役割 |
 |---|---|---|---|
-| @username | 氏名 | XX大学 XX学部 | PM |
-| @username | 氏名 | XX大学 XX学部 | BE |
-| @username | 氏名 | XX大学 XX学部 | FE |
-| @username | 氏名 | XX大学 XX学部 | Design |
+| @Sammylla | 若宮 小芭音 | 神山まるごと高等専門学校 デザインエンジニアリング学科  | FE |
+| @Reon1257 | 合田 怜恩 | 慶應義塾大学 経済学部 | FE |
+| @shimmen3141 | 新免 友基 | 北海道大学大学院 情報科学院 | FE |
+| @aoi0814 | 吉村 有生 | 名古屋大学大学院 情報学研究科 | FE |
 
 担当役割の凡例：**PM** / **BE**（Backend）/ **FE**（Frontend）/ **Design** / **Infra** / **Data** / その他
 
@@ -57,16 +57,16 @@
 
 | 種別 | URL |
 |---|---|
-| デモ環境 | （Vercel / Render / Netlify 等） |
-| プレゼン資料 | （Google Slides / Notion / Speakerdeck） |
-| デモ動画 | （YouTube / Loom） |
+| デモ環境 | Firebase |
+| プレゼン資料 | Canva |
+| デモ動画 | Google Drive |
 
 ## 技術スタック
 
-- **フロント**：
-- **バックエンド**：
-- **インフラ**：
-- **利用 AI ツール**：
+- **フロント**： React, TypeScript, vite
+- **バックエンド**： Firebase（Cloud Functions / Authentication）
+- **インフラ**： Firebase
+- **利用 AI ツール**： Claude, ChatGPT, Gemini, Cursor
 
 ### 使用した外部 API / サービス
 
@@ -99,8 +99,12 @@ npm run dev
 
 | 日時 | メンター | 議論内容（要点） | 採用 / 一部採用 / 不採用 |
 |---|---|---|---|
-| Day1 14:00 | （例）Mercari 坂本さん | コア機能の絞り込み | 採用 |
-| Day2 11:00 |  |  |  |
+| Day2 10:40 | Mercari Pyonさん | 想定ユーザの具体化 | 採用 |
+| Day2 10:50 | Mercari Pyonさん | 機能面の必然性の指摘 | 一部採用 |
+| Day2 11:00 | Mercari Pyonさん | ユーザ像の具体化 | 一部採用 |
+| Day2 11:10 | Mercari Pyonさん | 課題の明確化 | 一部採用 |
+| Day2 16:50 | Mercari Pyonさん | ペルソナの別案 | 採用 |
+| Day2 17:00 | Mercari Pyonさん | プレゼン構成 | 一部採用 |
 
 ## AI 活用ログ
 
@@ -114,9 +118,9 @@ npm run dev
 
 | 項目 | 許諾 (Y/N) | 補足・条件 |
 |---|---|---|
-| ① このリポを **Public 化**してよい（コードがすべて公開される） | | |
-| ② プロダクト名・スクリーンショット・1行ピッチを **HTV / Mercari の SNS・記事**で掲載してよい | | |
-| ③ **スポンサー企業（Mercari, P&G 等）の広報・採用ページ**でプロダクト紹介してよい | | |
+| ① このリポを **Public 化**してよい（コードがすべて公開される） | Y | |
+| ② プロダクト名・スクリーンショット・1行ピッチを **HTV / Mercari の SNS・記事**で掲載してよい | Y | |
+| ③ **スポンサー企業（Mercari, P&G 等）の広報・採用ページ**でプロダクト紹介してよい | Y | |
 
 ## 審査観点（参考）
 
