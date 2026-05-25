@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Character, Chat, ChatMessage, Egg } from '../types/models'
 import { CharacterAvatar, ChatBubble, ChatInput } from '../features/character-growing'
+import { generateAiReply } from '../lib/aiReply'
 import { Modal } from './ui'
 
 // ---------------------------------------------------------------------------
@@ -60,14 +61,6 @@ function persistChat(chat: Chat): void {
 }
 
 function buildMockReply(character: Character, userText: string): string {
-  // TODO: Replace with Cloud Functions AI call:
-  //   const { data } = await httpsCallable(functions, 'generateCharacterReply')({
-  //     characterId: character.id,
-  //     message: userText,
-  //     personality: character.personality,
-  //     knowledgeAreas: character.knowledgeAreas,
-  //   })
-  //   return data.reply
   const pool = [
     `（${character.name}）「${character.unlockedTopics[0] ?? 'それ'}」について、もう少し聞かせてください。`,
     `（${character.name}）${character.knowledgeAreas[0] ?? 'そのこと'}との繋がりが見えてきた気がします。`,
@@ -135,20 +128,29 @@ export function CharacterChat({ character, egg, userId }: CharacterChatProps) {
       setIsLoading(true)
       setReplyFading(false)
 
-      // TODO: Replace timeout with actual Cloud Functions call (see buildMockReply)
-      await new Promise<void>((resolve) => setTimeout(resolve, 900))
+      let replyText = ''
+      try {
+        replyText = await generateAiReply({
+          promptType: 'character_growing',
+          message: trimmed,
+          context: `characterName=${character.name}; personality=${character.personality}; knowledgeAreas=${character.knowledgeAreas.join(',')}`,
+        })
+      } catch {
+        // Fallback for local/dev cases where functions are unreachable.
+        replyText = buildMockReply(character, trimmed)
+      }
 
-      const charMsg: ChatMessage = {
+      const characterMessage: ChatMessage = {
         id: createId('msg'),
         role: 'character',
-        content: buildMockReply(character, trimmed),
+        content: replyText,
         createdAt: new Date().toISOString(),
       }
 
       setIsLoading(false)
-      setLastCharReply(charMsg.content)
+      setLastCharReply(characterMessage.content)
       setChat((prev) => {
-        const next = { ...prev, messages: [...prev.messages, charMsg], updatedAt: new Date().toISOString() }
+        const next = { ...prev, messages: [...prev.messages, characterMessage], updatedAt: new Date().toISOString() }
         persistChat(next)
         return next
       })

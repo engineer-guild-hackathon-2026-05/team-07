@@ -5,9 +5,10 @@ import type { PassionInput, Visibility } from '../../types/models'
 
 type AddPassionFormProps = {
   onSubmit: (input: PassionInput) => void | Promise<void>
+  errorMessage?: string
 }
 
-export function AddPassionForm({ onSubmit }: AddPassionFormProps) {
+export function AddPassionForm({ onSubmit, errorMessage }: AddPassionFormProps) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [tags, setTags] = useState<string[]>([])
@@ -61,7 +62,8 @@ export function AddPassionForm({ onSubmit }: AddPassionFormProps) {
           <option value="private">非公開</option>
         </select>
       </label>
-      <Button type="submit">たまごを生成する</Button>
+      <Button type="submit">AIチャットで深掘り</Button>
+      {errorMessage ? <p className="text-xs font-semibold text-[#c2410c]">{errorMessage}</p> : null}
     </form>
   )
 }
