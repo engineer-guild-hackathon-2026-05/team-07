@@ -72,6 +72,40 @@
   --space-6: 24px;
   --sans: 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', 'Yu Gothic', 'Segoe UI', sans-serif;
 
+  /* === Henai design tokens (from mock(3)/tokens.css) === */
+  --paper: #FBF6EC;
+  --paper-deep: #F2E9D6;
+  --paper-soft: #F7F0DE;
+  --card: #FFFCF4;
+  --card-edge: #E5E5E5;
+  --ink: #494949;
+  --ink-2: #5C5C5C;
+  --ink-3: #8A8A8A;
+  --ink-4: #B4B4B4;
+  --coral: #FF9B37;
+  --coral-deep: #E77300;
+  --coral-soft: #FFD2A1;
+  --coral-wash: #FFE9D2;
+  --plum: #6B3A55;
+  --plum-deep: #4A2438;
+  --plum-wash: #EFE3E9;
+  --sage: #7FA482;
+  --sage-deep: #5E8462;
+  --sage-wash: #E6EFE5;
+  --honey: #F3B85F;
+  --honey-deep: #D9962E;
+  --honey-wash: #FBF1DC;
+  --sky: #17BFE4;
+  --sky-soft: #A8E3F2;
+  --sky-wash: #E0F5FB;
+  --font-display: 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', 'Yu Gothic', 'Meiryo', system-ui, sans-serif;
+  --font-body: 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', 'Yu Gothic', 'Meiryo', system-ui, sans-serif;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --shadow-1:
+    0 1px 0 rgba(80, 50, 30, 0.04),
+    0 2px 6px rgba(80, 50, 30, 0.06);
+
   font: 16px/1.55 var(--sans);
   color: var(--text);
   background: var(--page-bg);
@@ -111,4 +145,10 @@
   #root {
     @apply min-h-svh;
   }
+}
+
+/* === Chat typing dots animation (used by PassionAiChat) === */
+@keyframes mofuBlink {
+  0%, 60%, 100% { opacity: 0.25; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-2px); }
 }

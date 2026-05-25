@@ -78,7 +78,12 @@ export function CharacterAvatar({ character, egg }: Props) {
           <StatusRow label="知識領域">
             <div className="flex flex-wrap gap-1.5">
               {character.knowledgeAreas.map((area) => (
-                <span key={area} className="tag-chip tag-chip--static text-xs">{area}</span>
+                <span
+                  key={area}
+                  className="rounded-full px-[11px] py-[7px] bg-[#eafffb] text-[#1598a5] text-xs font-extrabold"
+                >
+                  {area}
+                </span>
               ))}
             </div>
           </StatusRow>
@@ -87,7 +92,12 @@ export function CharacterAvatar({ character, egg }: Props) {
             <div className="flex flex-wrap gap-1.5">
               {character.unlockedTopics.length > 0 ? (
                 character.unlockedTopics.map((topic) => (
-                  <span key={topic} className="tag-chip tag-chip--static text-xs">{topic}</span>
+                  <span
+                    key={topic}
+                    className="rounded-full px-[11px] py-[7px] bg-[#eafffb] text-[#1598a5] text-xs font-extrabold"
+                  >
+                    {topic}
+                  </span>
                 ))
               ) : (
                 <span className="text-xs text-[#494949]/50">まだありません</span>

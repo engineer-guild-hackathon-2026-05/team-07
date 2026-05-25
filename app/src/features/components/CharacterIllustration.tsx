@@ -10,10 +10,10 @@ type CharacterIllustrationProps = {
 }
 
 const sizeClass: Record<NonNullable<CharacterIllustrationProps['size']>, string> = {
-  small: 'character-illustration--small',
-  medium: 'character-illustration--medium',
-  large: 'character-illustration--large',
-  featured: 'character-illustration--featured',
+  small: 'w-28 h-[124px]',
+  medium: 'w-[148px] h-[168px]',
+  large: 'w-[190px] h-[210px]',
+  featured: 'w-[220px] h-[240px]',
 }
 
 export function CharacterIllustration({
@@ -27,11 +27,22 @@ export function CharacterIllustration({
   const label = alt ?? resolveCharacterLabel(egg)
 
   return (
-    <div className={`character-illustration ${sizeClass[size]} ${className}`.trim()} aria-hidden={alt === ''}>
+    <div
+      className={`relative grid place-items-end justify-items-center flex-shrink-0 ${sizeClass[size]} ${className}`.trim()}
+      aria-hidden={alt === ''}
+    >
       {showPedestal ? (
-        <img src={heroPedestal} alt="" className="character-illustration__pedestal" />
+        <img
+          src={heroPedestal}
+          alt=""
+          className="absolute bottom-0 z-0 w-[72%] object-contain opacity-90"
+        />
       ) : null}
-      <img src={image} alt={label} className="character-illustration__sprite" />
+      <img
+        src={image}
+        alt={label}
+        className="relative z-[1] w-full h-full object-contain drop-shadow-[0_14px_24px_rgba(73,73,73,0.16)]"
+      />
     </div>
   )
 }
