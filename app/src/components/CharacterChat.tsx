@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Character, Chat, ChatMessage, Egg } from '../types/models'
 import { CharacterAvatar, ChatBubble, ChatInput } from '../features/character-growing'
 import { Modal } from './ui'
@@ -84,6 +84,8 @@ export function CharacterChat({ character, egg, userId }: CharacterChatProps) {
   const historyBottomRef = useRef<HTMLDivElement>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
+  const [lastCharReply, setLastCharReply] = useState<string | null>(null)
+  const [replyFading, setReplyFading] = useState(false)
 
   const [chat, setChat] = useState<Chat>(
     () =>
@@ -95,6 +97,20 @@ export function CharacterChat({ character, egg, userId }: CharacterChatProps) {
         updatedAt: new Date().toISOString(),
       },
   )
+
+  // Fade out reply bubble 3s after it appears, remove from DOM at 4.2s
+  useEffect(() => {
+    if (!lastCharReply) return
+    const fadeTimer = setTimeout(() => setReplyFading(true), 3000)
+    const clearTimer = setTimeout(() => {
+      setLastCharReply(null)
+      setReplyFading(false)
+    }, 4200)
+    return () => {
+      clearTimeout(fadeTimer)
+      clearTimeout(clearTimer)
+    }
+  }, [lastCharReply])
 
   const sendMessage = useCallback(
     async (content: string) => {
@@ -117,6 +133,7 @@ export function CharacterChat({ character, egg, userId }: CharacterChatProps) {
       })
 
       setIsLoading(true)
+      setReplyFading(false)
 
       // TODO: Replace timeout with actual Cloud Functions call (see buildMockReply)
       await new Promise<void>((resolve) => setTimeout(resolve, 900))
@@ -129,6 +146,7 @@ export function CharacterChat({ character, egg, userId }: CharacterChatProps) {
       }
 
       setIsLoading(false)
+      setLastCharReply(charMsg.content)
       setChat((prev) => {
         const next = { ...prev, messages: [...prev.messages, charMsg], updatedAt: new Date().toISOString() }
         persistChat(next)
@@ -153,15 +171,32 @@ export function CharacterChat({ character, egg, userId }: CharacterChatProps) {
       {/* Top spacer — pushes avatar toward center */}
       <div className="flex-1" />
 
-      {/* Character avatar (name, affinity, image, status button) */}
-      <CharacterAvatar character={character} egg={egg} />
-
-      {/* Loading indicator (visible during AI response) */}
-      {isLoading && (
-        <div className="px-4 pt-2">
-          <LoadingBubble />
+      {/* Speech bubble — sits above character name, tail points center-down toward character */}
+      {(isLoading || lastCharReply !== null) && (
+        <div
+          className={`px-6 pb-2 flex justify-center transition-opacity duration-[1200ms] ${replyFading ? 'opacity-0' : 'opacity-100'}`}
+        >
+          <div className="relative bg-white border border-[#f1e7dc] rounded-2xl px-4 py-3 shadow-md max-w-[85%]">
+            {isLoading ? (
+              <span className="inline-flex items-center gap-1 text-sm text-[#494949]/60">
+                考え中
+                <span className="flex gap-0.5">
+                  <Dot delay="0ms" />
+                  <Dot delay="160ms" />
+                  <Dot delay="320ms" />
+                </span>
+              </span>
+            ) : (
+              <p className="text-sm text-[#494949] leading-relaxed">{lastCharReply}</p>
+            )}
+            {/* Tail — center bottom, pointing downward toward character */}
+            <div className="absolute -bottom-[7px] left-1/2 -translate-x-1/2 w-3.5 h-3.5 bg-white border-r border-b border-[#f1e7dc] rotate-45" />
+          </div>
         </div>
       )}
+
+      {/* Character avatar (name, affinity, image, status button) */}
+      <CharacterAvatar character={character} egg={egg} />
 
       {/* Spacer so input doesn't overlap avatar */}
       <div className="flex-1" />
@@ -189,21 +224,6 @@ export function CharacterChat({ character, egg, userId }: CharacterChatProps) {
 }
 
 // ── Sub-components ──────────────────────────────────────────────────────────
-
-function LoadingBubble() {
-  return (
-    <div className="max-w-[72%] self-start rounded-[20px] rounded-bl-[4px] px-3.5 py-2.5 bg-[#fff1df] text-sm text-[#494949]/50">
-      <span className="inline-flex gap-1 items-center">
-        考え中
-        <span className="flex gap-0.5">
-          <Dot delay="0ms" />
-          <Dot delay="160ms" />
-          <Dot delay="320ms" />
-        </span>
-      </span>
-    </div>
-  )
-}
 
 function Dot({ delay }: { delay: string }) {
   return (
