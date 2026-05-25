@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 
 type ModalProps = {
   children: ReactNode
@@ -12,14 +13,14 @@ export function Modal({ children, isOpen, onClose, title }: ModalProps) {
     return null
   }
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-x-0 top-0 bottom-[calc(70px+env(safe-area-inset-bottom,0px))] z-10 grid place-items-center p-6 bg-[rgba(31,31,31,0.34)]"
       role="presentation"
       onClick={onClose}
     >
       <section
-        className="w-full max-w-sm rounded-[28px] p-5 bg-white shadow-card"
+        className="w-full max-w-md max-h-[min(85vh,640px)] overflow-y-auto rounded-[28px] p-5 bg-white shadow-card"
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
@@ -40,6 +41,7 @@ export function Modal({ children, isOpen, onClose, title }: ModalProps) {
         </div>
         {children}
       </section>
-    </div>
+    </div>,
+    document.body,
   )
 }
