@@ -13,6 +13,16 @@ const HISTORY_LIMIT = 24;
 
 type OpenAIResponsesOutput = {
   output_text?: string;
+  output?: Array<{
+    content?: Array<{
+      text?: string;
+      refusal?: string;
+    }>;
+    refusal?: string;
+  }>;
+  error?: {
+    message?: string;
+  };
 };
 
 type InterviewTurn = {
@@ -51,12 +61,31 @@ async function callOpenAi(input: Array<{ role: "system" | "user" | "assistant"; 
   });
 
   if (!response.ok) {
+    const body = await response.text();
+    console.error("characterMaking interview OpenAI API failed", {
+      status: response.status,
+      body,
+    });
     throw new HttpsError("internal", "AI応答の生成に失敗しました。");
   }
 
   const json = (await response.json()) as OpenAIResponsesOutput;
-  const text = json.output_text?.trim();
+  const text = [
+    json.output_text?.trim() ?? "",
+    ...(json.output ?? []).flatMap((item) => [
+      item.refusal?.trim() ?? "",
+      ...((item.content ?? []).map((part) => (part.text ?? part.refusal ?? "").trim())),
+    ]),
+  ]
+    .filter((value) => value.length > 0)
+    .join("\n")
+    .trim();
   if (!text) {
+    console.error("characterMaking interview OpenAI response had no text", {
+      hasOutputText: Boolean(json.output_text),
+      outputLength: json.output?.length ?? 0,
+      errorMessage: json.error?.message ?? "",
+    });
     throw new HttpsError("internal", "AI応答の生成に失敗しました。");
   }
 
