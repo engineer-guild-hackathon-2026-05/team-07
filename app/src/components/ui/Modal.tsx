@@ -15,7 +15,7 @@ export function Modal({ children, isOpen, onClose, title }: ModalProps) {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 grid place-items-center p-4 sm:p-6 bg-[rgba(31,31,31,0.34)]"
+      className="fixed inset-x-0 top-0 bottom-[calc(70px+env(safe-area-inset-bottom,0px))] z-10 grid place-items-center p-6 bg-[rgba(31,31,31,0.34)]"
       role="presentation"
       onClick={onClose}
     >
