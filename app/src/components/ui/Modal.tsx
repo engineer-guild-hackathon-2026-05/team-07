@@ -14,12 +14,12 @@ export function Modal({ children, isOpen, onClose, title }: ModalProps) {
 
   return (
     <div
-      className="fixed md:fixed inset-0 z-10 grid place-items-center p-6 bg-[rgba(31,31,31,0.34)]"
+      className="fixed inset-x-0 top-0 bottom-[calc(70px+env(safe-area-inset-bottom,0px))] z-10 grid place-items-center p-6 bg-[rgba(31,31,31,0.34)]"
       role="presentation"
       onClick={onClose}
     >
       <section
-        className="w-full rounded-[28px] p-5 bg-white shadow-card"
+        className="w-full max-w-sm rounded-[28px] p-5 bg-white shadow-card"
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"

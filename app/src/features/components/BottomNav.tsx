@@ -5,7 +5,6 @@ type BottomNavProps = {
 }
 
 const navItems: Array<{ path: string; label: string; icon: string; ariaLabel: string; match?: string }> = [
-  { path: '/', label: 'Home', icon: '⌂', ariaLabel: 'ホーム' },
   { path: '/passions/new', label: '偏愛', icon: '♥', ariaLabel: '偏愛を登録する' },
   { path: '/exchange/share', label: '交換', icon: '⇄', ariaLabel: '卵を交換する', match: '/exchange' },
   { path: '/characters', label: '育成', icon: '✦', ariaLabel: 'キャラを育てる', match: '/characters' },
@@ -13,7 +12,7 @@ const navItems: Array<{ path: string; label: string; icon: string; ariaLabel: st
 ]
 
 const NAV =
-  'z-30 fixed left-0 right-0 bottom-0 grid grid-cols-5 gap-1 w-full rounded-t-[20px] px-2.5 pt-2.5 pb-[calc(10px+env(safe-area-inset-bottom,0px))] bg-primary border-t border-[rgba(255,255,255,0.18)] shadow-[0_-10px_28px_rgba(231,115,0,0.22)] md:sticky md:top-0 md:left-auto md:bottom-auto md:flex md:flex-col md:gap-6 md:w-auto md:h-svh md:rounded-none md:px-[18px] md:py-7 md:bg-white md:border-t-0 md:border-r md:border-border md:shadow-none'
+  'z-30 fixed left-0 right-0 bottom-0 grid grid-cols-4 gap-1 w-full rounded-t-[20px] px-2.5 pt-2.5 pb-[calc(10px+env(safe-area-inset-bottom,0px))] bg-primary border-t border-[rgba(255,255,255,0.18)] shadow-[0_-10px_28px_rgba(231,115,0,0.22)] md:sticky md:top-0 md:left-auto md:bottom-auto md:flex md:flex-col md:gap-6 md:w-auto md:h-svh md:rounded-none md:px-[18px] md:py-7 md:bg-white md:border-t-0 md:border-r md:border-border md:shadow-none'
 
 const LINK_BASE =
   'grid place-items-center content-center gap-px h-[50px] rounded-[14px] bg-transparent font-black md:grid-cols-[36px_1fr] md:gap-2.5 md:items-center md:justify-items-start md:h-auto md:min-h-[46px] md:px-3 md:py-2.5 md:rounded-[14px] md:text-left'
