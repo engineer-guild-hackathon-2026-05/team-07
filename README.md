@@ -57,9 +57,9 @@
 
 | 種別 | URL |
 |---|---|
-| デモ環境 | Firebase |
-| プレゼン資料 | Canva |
-| デモ動画 | Google Drive |
+| デモ環境 | https://egh-team7.web.app/ |
+| プレゼン資料 |  |
+| デモ動画 |  |
 
 ## 技術スタック
 

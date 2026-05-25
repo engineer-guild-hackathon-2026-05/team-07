@@ -1,5 +1,7 @@
 # AI 活用ログ — Team {{TEAM_NUMBER}}
 
+> 記入者: WAKAMIYA（ChatGPTで記入）
+
 審査項目「AI 活用度」の根拠資料。Day1〜Day3 を通して、AI ツールをどう使ったかを記録する。
 **最低 1 日 3 件以上**の記入を目安に。
 
@@ -205,10 +207,202 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：依存ブランチの変更と#6実装を両立した形で整合性を回復できたため。
 
+### #015 FunctionsでOpenAI接続を実装
+
+- **時刻**：12:20
+- **ツール**：Codex (GPT-5)
+- **目的**：Cloud Functions のダミー応答を GPT API 実接続へ切り替え
+- **プロンプト**：
+  ```
+  functionsを立てます。apikeyを発行したので、これから実際にaiと接続します。
+  使うのはGPTのapiです
+  ```
+- **出力サマリ**：`functions/src/index.ts` に `generatePassionReply` callable を実装。`OPENAI_API_KEY` と `OPENAI_MODEL` を参照し、OpenAI Responses APIへ問い合わせて返答を返す構成に変更。`npm run build` 成功確認。
+- **評価**：採用
+- **採用 / 不採用の理由**：既存クライアント導線を維持したまま本番API接続へ移行できたため。
+
+### #016 作成/育成で共通API+JSONプロンプト化
+
+- **時刻**：12:45
+- **ツール**：Codex (GPT-5)
+- **目的**：キャラクター作成と育成で同一 Cloud Functions を使い、プロンプトをJSON分離
+- **プロンプト**：
+  ```
+  キャラクター作成部分と、キャラクター育成部分で、それぞれおなじAPIを叩きたいので、プロンプトをjsonで別ファイルに準備して、同じcloud functionsを叩けるようにしたいな
+  ```
+- **出力サマリ**：`functions/src/prompts/character_making.json` と `character_growing.json` を追加。共通 callable `generateAiReply` を実装し `promptType` でJSONプロンプトを切替。互換用に `generatePassionReply` も維持。フロントに共通クライアント `src/lib/aiReply.ts` を追加し、`CharacterChat` から `promptType=character_growing` で呼び出すよう変更。
+- **評価**：採用
+- **採用 / 不採用の理由**：プロンプト管理の一元化と機能間の再利用性が上がり、Functions/フロントともビルド成功したため。
+
+### #003 コミット整理と新規Issue作成
+
+- **時刻**：13:10
+- **ツール**：Codex (GPT-5) + GitHub CLI
+- **目的**：コミット運用整理と、キャラクター作成（偏愛登録/偏愛深掘り）Issueの起票
+- **プロンプト**：
+  ```
+  WAKAMIYA.mdちゃんと更新してくださいねー！
+  それでは、issueを立てます。
+  キャラクター作成の、偏愛登録と偏愛深掘りを実装するissueを立ててください
+  ```
+- **出力サマリ**：AI usage log を更新した上で、偏愛登録 + 偏愛深掘りを対象にした実装IssueをGitHubで作成。
+- **評価**：採用
+- **採用 / 不採用の理由**：運用ルールとタスク管理を同時に満たせたため。
+
+### #004 偏愛深掘り機能の実装方針整理
+
+- **時刻**：13:25
+- **ツール**：Codex (GPT-5)
+- **目的**：実装前に偏愛深掘り機能の方針と追加機能を明文化
+- **プロンプト**：
+  ```
+  それでは、偏愛深掘り機能を実装します。
+  実装方針と追加する機能を先に説明してください。
+  ```
+- **出力サマリ**：共通 Cloud Functions API `generateAiReply` を `promptType=character_making` で利用する方針を提示。追加機能として、深掘りチャットUI、会話履歴保存（`passions/{passionId}.chatHistory`）、卵生成導線（1ユーザー1卵制限）を整理。
+- **評価**：採用
+- **採用 / 不採用の理由**：実装前にスコープと責務分割を共有でき、作業の手戻りを減らせるため。
+
+### #005 偏愛深掘り機能の実装
+
+- **時刻**：13:45
+- **ツール**：Codex (GPT-5)
+- **目的**：偏愛登録後にAI深掘りチャットへ遷移し、会話履歴を保存する
+- **プロンプト**：
+  ```
+  では実装してください
+  ```
+- **出力サマリ**：`AddPassion` 送信後に `passionId` を使って `/passions/:passionId/aichat` へ遷移。`PassionAiChat` 画面を追加し、`generateAiReply(promptType=character_making)` で応答取得。`passions/{passionId}.chatHistory` へ会話履歴を保存。`PassionDoc` 型にも `chatHistory` を追加。`app` と `functions` のビルド成功確認。
+- **評価**：採用
+- **採用 / 不採用の理由**：Issue #50 の深掘り導線に必要な機能を一式実装できたため。
+
+### #006 セキュリティ指摘への是正対応
+
+- **時刻**：14:10
+- **ツール**：Codex (GPT-5)
+- **目的**：セキュリティレビュー指摘（認証必須化・情報露出抑制・ルール強化）を修正
+- **プロンプト**：
+  ```
+  修正してください
+  ```
+- **出力サマリ**：`generateAiReply` / `generatePassionReply` に認証必須チェックを追加。OpenAIエラー詳細をクライアントへ返さないよう変更し、詳細はFunctionsログへ出力。`passions` の Firestore Rules に許可フィールドと型/件数制約を追加。`chatHistory` 更新を `runTransaction` 化して競合耐性を強化。`app` / `functions` ビルド成功確認。
+- **評価**：採用
+- **採用 / 不採用の理由**：高優先の課金悪用リスクと情報露出リスクを先に潰し、データ整合性も向上できたため。
+
 ---
 
 ## Day 3（2026-05-26）
 
-### #00X
+### #001 セキュリティ調査
+
+- **時刻**：14:30
+- **ツール**：GitHub Copilot
+- **目的**：アプリ全体のセキュリティ設計と実装状況を確認する
+- **プロンプト**：
+  ```
+  このアプリケーションのセキュリティを調査してください。
+  usage log wakamiya.mdの中に、もともと入っている文章のフォーマットに倣って情報を追加してください。あなたの名前も書いてください
+  ```
+- **出力サマリ**：
+  - `app/firestore.rules` は認証必須を前提とし、`users` / `passions` / `chats` を本人判定、`eggs` / `characters` / `exchanges` は作成・更新を Cloud Functions のみ許可する設計。クライアントからの不正な `create` / `delete` を原則拒否している。
+  - `app/src/firebase/auth.ts` では Google / 匿名 /デモログインを提供し、Firebase Auth で認証したユーザーのみ `users/{uid}` を作成・更新する構造。`useAuth` では `ensureUserDocument` による Firestore 書き込みもあり、Firestore ルールとの整合性が重要。
+  - `app/functions/src/index.ts` の OpenAI 呼び出しは `process.env.OPENAI_API_KEY` を参照し、秘密鍵を Cloud Functions 実行環境に閉じる実装。クライアント側に API キーが流出しない点は良好。
+  - ただし `firebaseConfig` が `app/src/firebase/firebase.ts` にベタ書きされており、Firebase プロジェクトIDなどは公開クライアント設定として扱われるため、機密情報は `.env` に分離する運用が望ましい。
+- **評価**：不採用
+- **採用 / 不採用の理由**：
+ログの追記のみでセキュリティに関する出力がなかった。
+
+---
+
+### #002 functions/.env のGit管理除外
+
+- **時刻**：14:40
+- **ツール**：Codex (GPT-5)
+- **目的**：`functions/.env` を誤ってコミットしないようにする
+- **プロンプト**：
+  ```
+  functions .envをgit ignore
+  ```
+- **出力サマリ**：`app/functions/.gitignore` に `.env` と `.env.*` を追加し、Functions用環境変数ファイルをGit管理対象外に設定。
+- **評価**：採用
+- **採用 / 不採用の理由**：APIキーなど機微情報の漏洩リスクを下げる基本対策のため。
+
+---
+
+### #003 Functions deploy失敗（lint）への対処
+
+- **時刻**：14:55
+- **ツール**：Codex (GPT-5)
+- **目的**：`firebase deploy --only functions` の predeploy lint エラーを解消
+- **プロンプト**：
+  ```
+  firebase deploy --only functions
+  ...
+  Invalid option '--ext' ... You're using eslint.config.js ...
+  ```
+- **出力サマリ**：`functions/package.json` の lint スクリプトを `ESLINT_USE_FLAT_CONFIG=false` 付きに修正し、さらに `functions/src/index.ts` と `functions/src/types/firestore.ts` の lint違反（JSDoc/spacing）を修正。`npm --prefix functions run lint` で成功確認。
+- **評価**：採用
+- **採用 / 不採用の理由**：デプロイ前チェックが通る状態を再現できたため。
+
+---
+
+### #004 AIチャット internal 調査のためのエラー可視化
+
+- **時刻**：16:30
+- **ツール**：Codex (GPT-5)
+- **目的**：`internal` エラー原因をフロントで即時判別できるようにする
+- **プロンプト**：
+  ```
+  変えて
+  mdも忘れずにねー
+  ```
+- **出力サマリ**：`app/src/pages/PassionAiChat.tsx` の `catch` を変更し、`console.error(error)` と `error.message` を画面表示するように修正。Functions 側が返す `unauthenticated` / `failed-precondition` / `internal` などの差分をクライアントで直接確認できる状態にした。
+- **評価**：採用
+- **採用 / 不採用の理由**：Network/Functionsログだけで切り分けが進まない状況で、デバッグ速度を上げる実用的な改善になったため。
+
+---
+
+### #005 Functions Emulator 接続の導入
+
+- **時刻**：16:55
+- **ツール**：Codex (GPT-5)
+- **目的**：本番デプロイ前にローカルで callable function を検証できるようにする
+- **プロンプト**：
+  ```
+  エミュレーター繋いで欲しい
+  ```
+- **出力サマリ**：`src/firebase/firebase.ts` で `functions` を `asia-northeast1` 固定生成し、`import.meta.env.DEV` 時に `connectFunctionsEmulator(functions, "127.0.0.1", 5001)` を適用。`src/lib/aiReply.ts` と `src/lib/passionAi.ts` は個別 `getFunctions` を廃止して共通 `functions` インスタンスを参照するよう統一。
+- **評価**：採用
+- **採用 / 不採用の理由**：開発時の通信先が明示され、internalエラーの再現と切り分けをローカルで安全に実施できるため。
+
+---
+
+### #006 OpenAIレスポンス解析の補強
+
+- **時刻**：17:10
+- **ツール**：Codex (GPT-5)
+- **目的**：`OpenAI API から応答を取得できませんでした。` エラーの解消
+- **プロンプト**：
+  ```
+  PassionAiChat.tsx:66 FirebaseError: OpenAI API から応答を取得できませんでした。
+  ```
+- **出力サマリ**：`functions/src/index.ts` のレスポンス解析を修正し、`output_text` だけでなく `output[].content[].text` からも返答を抽出するように変更。空応答判定の取りこぼしを防止。
+- **評価**：採用
+- **採用 / 不採用の理由**：OpenAI Responses API の返却形式差分に対応でき、internalエラーの再発防止につながるため。
+
+---
+
+### #007 本番向けエラーメッセージ表示へ復元
+
+- **時刻**：17:20
+- **ツール**：Codex (GPT-5)
+- **目的**：デバッグ用の詳細エラー露出をやめ、本番向けUIに戻す
+- **プロンプト**：
+  ```
+  じゃあ、本番環境用に戻して
+  ```
+- **出力サマリ**：`app/src/pages/PassionAiChat.tsx` の `catch` を復元し、`console.error` と `error.message` の直接表示を廃止。ユーザー向けには固定文言（再試行案内）のみ表示する実装に戻した。
+- **評価**：採用
+- **採用 / 不採用の理由**：内部エラー情報の露出を防ぎ、UXとセキュリティのバランスを本番運用向けに戻せたため。
 
 ---

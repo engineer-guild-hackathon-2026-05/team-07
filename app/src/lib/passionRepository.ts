@@ -1,4 +1,4 @@
-import { addDoc, collection, doc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore'
+import { addDoc, collection, doc, getDoc, runTransaction, serverTimestamp } from 'firebase/firestore'
 import { db } from '../firebase/firebase'
 import { COLLECTIONS } from '../types/firestore'
 import type { PassionInput } from '../types/models'
@@ -27,7 +27,16 @@ export async function createPassionInFirestore(input: PassionInput, ownerUid: st
 
 export async function appendPassionChatHistory(passionId: string, messages: PassionChatMessage[]) {
   const passionRef = doc(db, COLLECTIONS.PASSIONS, passionId)
-  await updateDoc(passionRef, { chatHistory: messages })
+  await runTransaction(db, async (transaction) => {
+    const snap = await transaction.get(passionRef)
+    if (!snap.exists()) {
+      return
+    }
+    const data = snap.data() as { chatHistory?: unknown }
+    const currentHistory = Array.isArray(data.chatHistory) ? data.chatHistory : []
+    const nextHistory = [...currentHistory, ...messages].slice(-200)
+    transaction.update(passionRef, { chatHistory: nextHistory })
+  })
 }
 
 export async function loadPassionChatHistory(passionId: string): Promise<PassionChatMessage[]> {

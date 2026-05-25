@@ -1,5 +1,5 @@
-import { getFunctions, httpsCallable } from 'firebase/functions'
-import { app } from '../firebase/firebase'
+import { httpsCallable } from 'firebase/functions'
+import { functions } from '../firebase/firebase'
 
 type GeneratePassionReplyRequest = {
   passionId: string
@@ -12,7 +12,6 @@ type GeneratePassionReplyResponse = {
 
 export async function generatePassionReply(input: GeneratePassionReplyRequest) {
   try {
-    const functions = getFunctions(app, 'asia-northeast1')
     const generate = httpsCallable<GeneratePassionReplyRequest, GeneratePassionReplyResponse>(
       functions,
       'generatePassionReply',
