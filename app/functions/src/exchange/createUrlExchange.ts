@@ -89,6 +89,7 @@ export async function createUrlExchangeHandler(
 }
 
 export const createUrlExchange = onCall<CreateUrlExchangeInput>(
+  {region: "asia-northeast1"},
   async (request) => {
     const db = getFirestore();
     return createUrlExchangeHandler(request.auth?.uid, request.data, {
