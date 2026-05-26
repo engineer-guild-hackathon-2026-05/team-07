@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type Dispatch, type SetStateAction } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { CharacterChat } from '../components/CharacterChat'
 import { CharacterIllustration } from '../features/components/CharacterIllustration'
@@ -11,7 +11,7 @@ type CharacterDetailPageProps = {
   eggs: Egg[]
   userId?: string
   user: User
-  onDataChange?: (data: AppData) => void
+  onDataChange?: Dispatch<SetStateAction<AppData>>
   onLogout: () => Promise<void> | void
 }
 
@@ -86,7 +86,7 @@ function CharacterDetailBody({
   isPreHatch: boolean
   userId: string
   user: User
-  onDataChange?: (data: AppData) => void
+  onDataChange?: Dispatch<SetStateAction<AppData>>
   onLogout: () => Promise<void> | void
 }) {
   const [talkStarted, setTalkStarted] = useState(

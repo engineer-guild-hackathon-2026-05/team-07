@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { createEggFromPassion } from '../lib/eggRepository'
-import { appendEggToLocalData } from '../lib/localRepository'
+import { activateEggForNurturing, appendEggToLocalData } from '../lib/localRepository'
 import type { AppData } from '../types/models'
 
 type PassionEggCreatePageProps = {
@@ -54,7 +54,7 @@ export function PassionEggCreatePage({
     try {
       await new Promise((resolve) => setTimeout(resolve, 1400))
       const createdEgg = await createEggFromPassion({ passionId, userId, userName })
-      const nextData = appendEggToLocalData(createdEgg)
+      const nextData = activateEggForNurturing(appendEggToLocalData(createdEgg), userId, createdEgg.id)
       onDataChange(nextData)
       setEggId(createdEgg.id)
       setPhase('done')

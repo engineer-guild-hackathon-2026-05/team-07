@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { AppData, Character, Chat, ChatMessage, Egg, User } from '../types/models'
 import { ChatBubble, ChatInput } from '../features/character-growing'
@@ -8,11 +8,13 @@ import { fetchCharacterFromFirestore } from '../lib/characterRepository'
 import { fetchChatMessages, sendMessageToCharacter } from '../lib/chatRepository'
 import { advanceHatchProgress } from '../lib/hatchRepository'
 import {
-  advanceLocalHatchProgress,
   applyHatchProgressToAppData,
-  loadAppData,
+  HATCH_COMPLETE_LEVEL,
+  HATCH_PROGRESS_PER_MESSAGE,
+  mergeEggsIntoAppData,
   STORAGE_KEY,
 } from '../lib/localRepository'
+import { buildCharacterFromEgg } from '../lib/viewHelpers'
 import { auth } from '../firebase/firebase'
 import { Modal } from './ui'
 
@@ -22,7 +24,7 @@ type CharacterChatProps = {
   isPreHatch?: boolean
   userId: string
   user: User
-  onDataChange?: (data: AppData) => void
+  onDataChange?: Dispatch<SetStateAction<AppData>>
   onLogout: () => Promise<void> | void
 }
 
@@ -145,29 +147,59 @@ export function CharacterChat({
       })
 
       const firebaseUser = auth.currentUser
-      if (isPreHatch) {
+      if (isPreHatch && onDataChange) {
+        const nextHatchLevel = Math.min(
+          HATCH_COMPLETE_LEVEL,
+          egg.hatchLevel + HATCH_PROGRESS_PER_MESSAGE,
+        )
+        const willHatch = nextHatchLevel >= HATCH_COMPLETE_LEVEL
+
+        // リモート成否に関わらず UI を即更新（1 回 +50%）
+        onDataChange((prev) => {
+          const base = prev.eggs.some((item) => item.id === egg.id)
+            ? prev
+            : mergeEggsIntoAppData(prev, [egg])
+          const hatchedCharacter = willHatch
+            ? buildCharacterFromEgg({ ...egg, hatchLevel: nextHatchLevel })
+            : undefined
+          return applyHatchProgressToAppData(base, egg.id, nextHatchLevel, hatchedCharacter)
+        })
+
+        // Firestore / Cloud Functions へ非同期同期
         if (firebaseUser) {
-          try {
-            const result = await advanceHatchProgress(egg.id)
-            const hatchedCharacter =
-              result.hatched && result.characterId
-                ? ((await fetchCharacterFromFirestore(result.characterId)) ?? undefined)
-                : undefined
-            const nextData = applyHatchProgressToAppData(
-              loadAppData(),
-              egg.id,
-              result.hatchLevel,
-              hatchedCharacter,
-            )
-            onDataChange?.(nextData)
-          } catch {
-            // 孵化進行失敗時もチャット自体は継続する
-          }
-        } else {
-          const progress = advanceLocalHatchProgress(egg.id, userId)
-          if (progress) {
-            onDataChange?.(progress.data)
-          }
+          void advanceHatchProgress(egg.id)
+            .then(async (result) => {
+              if (result.hatchLevel === nextHatchLevel && !result.hatched) {
+                return
+              }
+
+              let hatchedCharacter: Character | undefined
+              if (result.hatched && result.characterId) {
+                hatchedCharacter =
+                  (await fetchCharacterFromFirestore(result.characterId)) ?? undefined
+              }
+              if (result.hatched && !hatchedCharacter) {
+                hatchedCharacter = buildCharacterFromEgg({
+                  ...egg,
+                  hatchLevel: result.hatchLevel,
+                })
+              }
+
+              onDataChange((prev) => {
+                const base = prev.eggs.some((item) => item.id === egg.id)
+                  ? prev
+                  : mergeEggsIntoAppData(prev, [egg])
+                return applyHatchProgressToAppData(
+                  base,
+                  egg.id,
+                  result.hatchLevel,
+                  hatchedCharacter,
+                )
+              })
+            })
+            .catch(() => {
+              // 楽観更新済みのため UI は維持する
+            })
         }
       }
 
