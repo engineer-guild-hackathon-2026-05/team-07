@@ -1,9 +1,13 @@
 import type { ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
-import { generateAiReply } from '../lib/aiReply'
-import { finalizePassionInterview } from '../lib/passionInterview'
-import { appendPassionChatHistory, loadPassionChatHistory, type PassionChatMessage } from '../lib/passionRepository'
+import {
+  continuePassionInterview,
+  finalizePassionInterview,
+  loadMakingMessages,
+  startPassionInterview,
+} from '../lib/passionInterview'
+import type { PassionChatMessage } from '../lib/passionRepository'
 
 type PassionAiChatPageProps = {
   userId: string
@@ -19,13 +23,33 @@ export function PassionAiChatPage({ userId }: PassionAiChatPageProps) {
   const [isSending, setIsSending] = useState(false)
   const [isFinalizing, setIsFinalizing] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+  const [quickReplies, setQuickReplies] = useState<string[]>(QUICK_REPLIES)
   const scrollRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     if (!passionId) {
       return
     }
-    loadPassionChatHistory(passionId).then(setMessages).catch(() => setMessages([]))
+
+    const bootstrap = async () => {
+      try {
+        const loadedMessages = await loadMakingMessages(passionId)
+        if (loadedMessages.length > 0) {
+          setMessages(loadedMessages)
+          return
+        }
+
+        const started = await startPassionInterview(passionId)
+        setMessages(started.messages)
+        if (started.choices && started.choices.length > 0) {
+          setQuickReplies(started.choices)
+        }
+      } catch {
+        setErrorMessage('初期化に失敗しました。時間をおいて再試行してください。')
+      }
+    }
+
+    void bootstrap()
   }, [passionId])
 
   useEffect(() => {
@@ -62,19 +86,22 @@ export function PassionAiChatPage({ userId }: PassionAiChatPageProps) {
     setInput('')
 
     try {
-      const reply = await generateAiReply({
-        promptType: 'character_making',
-        message: trimmed,
-        context: `passionId=${passionId}`,
+      const response = await continuePassionInterview({
+        passionId,
+        userMessage: trimmed,
       })
       const assistantMessage: PassionChatMessage = {
         role: 'assistant',
-        content: reply,
+        content: response.reply,
         createdAt: new Date().toISOString(),
       }
       const nextMessages = [...nextBase, assistantMessage]
       setMessages(nextMessages)
-      await appendPassionChatHistory(passionId, [userMessage, assistantMessage])
+      if (response.choices && response.choices.length > 0) {
+        setQuickReplies(response.choices)
+      } else {
+        setQuickReplies(QUICK_REPLIES)
+      }
     } catch {
       setErrorMessage('AI応答の取得に失敗しました。時間をおいて再試行してください。')
       setMessages(messages)
@@ -266,7 +293,7 @@ export function PassionAiChatPage({ userId }: PassionAiChatPageProps) {
             flexShrink: 0,
           }}
         >
-          {QUICK_REPLIES.map((q) => (
+          {quickReplies.map((q) => (
             <button
               key={q}
               type="button"
