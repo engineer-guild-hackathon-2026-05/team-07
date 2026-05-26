@@ -7,6 +7,7 @@ type Phase = 'submitting' | 'success' | 'error'
 
 type Props = {
   isAuthenticated: boolean
+  onEggReceived?: (eggId: string) => Promise<void>
 }
 
 const errorMessageFromCode = (code: string): string => {
@@ -26,7 +27,7 @@ const errorMessageFromCode = (code: string): string => {
   }
 }
 
-export function ExchangeReceiveByIdPage({ isAuthenticated }: Props) {
+export function ExchangeReceiveByIdPage({ isAuthenticated, onEggReceived }: Props) {
   const { exchangeId = '' } = useParams<{ exchangeId: string }>()
   const navigate = useNavigate()
   const [phase, setPhase] = useState<Phase>('submitting')
@@ -50,6 +51,8 @@ export function ExchangeReceiveByIdPage({ isAuthenticated }: Props) {
       try {
         const result = await callCompleteExchange(exchangeId)
         if (cancelled) return
+        await onEggReceived?.(result.eggId)
+        if (cancelled) return
         setPhase('success')
         setMessage('受け取り完了！育成画面に移動します...')
         navigate(`/characters/${result.characterId}`, { replace: true })
@@ -64,7 +67,7 @@ export function ExchangeReceiveByIdPage({ isAuthenticated }: Props) {
     return () => {
       cancelled = true
     }
-  }, [exchangeId, isAuthenticated, navigate])
+  }, [exchangeId, isAuthenticated, navigate, onEggReceived])
 
   return (
     <div className="screen exchange-screen">

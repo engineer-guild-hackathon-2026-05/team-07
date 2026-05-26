@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import type { Character, Chat, ChatMessage, Egg } from '../../../types/models'
-import { loadAppData, getCurrentUser, CURRENT_USER_ID } from '../../../lib/localRepository'
+import { loadAppData, getCurrentUser, CURRENT_USER_ID, STORAGE_KEY } from '../../../lib/localRepository'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -28,7 +28,7 @@ function createId(prefix: string): string {
 //   The real-time listener in useEffect will then pick up the change automatically.
 function persistChat(chat: Chat): void {
   try {
-    const raw = localStorage.getItem('henai-local-mvp-data')
+    const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return
     const data = JSON.parse(raw) as { chats?: Chat[] }
     const chats = Array.isArray(data.chats) ? data.chats : []
@@ -38,7 +38,7 @@ function persistChat(chat: Chat): void {
     } else {
       chats.push(chat)
     }
-    localStorage.setItem('henai-local-mvp-data', JSON.stringify({ ...data, chats }))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...data, chats }))
   } catch {
     // ignore storage errors
   }
