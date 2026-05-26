@@ -148,6 +148,7 @@ function EggNurtureIntro({ egg, onStart }: { egg: Egg; onStart: () => void }) {
           </button>
         </div>
       </div>
+      <div className="h-[calc(var(--mobile-nav-height)+env(safe-area-inset-bottom,0px)+40px)]" aria-hidden />
     </div>
   )
 }

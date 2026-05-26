@@ -210,6 +210,8 @@ export function ProfilePage({ characters, eggs, exchanges, onLogout, passions, u
           ログアウトする
         </Button>
       </section>
+
+      <div className="h-[calc(var(--mobile-nav-height)+env(safe-area-inset-bottom,0px)+56px)]" aria-hidden />
     </div>
   )
 }
