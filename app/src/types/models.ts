@@ -82,4 +82,6 @@ export type AppData = {
   characters: Character[]
   exchanges: Exchange[]
   chats: Chat[]
+  /** uid → 育成画面にセッティング済みの eggId 一覧 */
+  nurturingEggIdsByUid?: Record<string, string[]>
 }

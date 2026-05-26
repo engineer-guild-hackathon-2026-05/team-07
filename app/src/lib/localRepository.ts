@@ -135,6 +135,7 @@ const sampleData: AppData = {
   characters: [sampleCharacterBlue, sampleCharacterPurple],
   exchanges: [],
   chats: [],
+  nurturingEggIdsByUid: {},
 }
 
 const readData = (): AppData => {
@@ -161,6 +162,10 @@ const readData = (): AppData => {
       characters: parsed.characters,
       exchanges: Array.isArray(parsed.exchanges) ? parsed.exchanges : [],
       chats: Array.isArray(parsed.chats) ? parsed.chats : [],
+      nurturingEggIdsByUid:
+        parsed.nurturingEggIdsByUid && typeof parsed.nurturingEggIdsByUid === 'object'
+          ? parsed.nurturingEggIdsByUid
+          : {},
     }
   } catch {
     return sampleData
@@ -207,10 +212,49 @@ export const getMyPassions = (data: AppData, uid = CURRENT_USER_ID) =>
 export const getMyEggs = (data: AppData, uid = CURRENT_USER_ID) =>
   data.eggs.filter((egg) => egg.currentOwnerUid === uid)
 
+export const getNurturingEggIds = (data: AppData, uid: string): string[] =>
+  data.nurturingEggIdsByUid?.[uid] ?? []
+
+export const isEggNurturing = (data: AppData, uid: string, eggId: string): boolean =>
+  getNurturingEggIds(data, uid).includes(eggId)
+
+export const getMyNurturingEggs = (data: AppData, uid = CURRENT_USER_ID) => {
+  const nurturingIds = new Set(getNurturingEggIds(data, uid))
+  return getMyEggs(data, uid).filter((egg) => nurturingIds.has(egg.id))
+}
+
+export const getMyUnassignedEggs = (data: AppData, uid = CURRENT_USER_ID) => {
+  const nurturingIds = new Set(getNurturingEggIds(data, uid))
+  return getMyEggs(data, uid).filter((egg) => !nurturingIds.has(egg.id))
+}
+
+export const activateEggForNurturing = (data: AppData, uid: string, eggId: string): AppData => {
+  const owned = data.eggs.some((egg) => egg.id === eggId && egg.currentOwnerUid === uid)
+  if (!owned || isEggNurturing(data, uid, eggId)) {
+    return data
+  }
+
+  const current = data.nurturingEggIdsByUid ?? {}
+  return writeData({
+    ...data,
+    nurturingEggIdsByUid: {
+      ...current,
+      [uid]: [...(current[uid] ?? []), eggId],
+    },
+  })
+}
+
 export const getMyCharacters = (data: AppData, uid = CURRENT_USER_ID) => {
   const myEggIds = new Set(getMyEggs(data, uid).map((egg) => egg.id))
   return data.characters.filter(
     (character) => myEggIds.has(character.eggId) && character.id === character.eggId,
+  )
+}
+
+export const getMyNurturingCharacters = (data: AppData, uid = CURRENT_USER_ID) => {
+  const nurturingEggIds = new Set(getNurturingEggIds(data, uid))
+  return data.characters.filter(
+    (character) => nurturingEggIds.has(character.eggId) && character.id === character.eggId,
   )
 }
 
@@ -283,6 +327,9 @@ export const mergeEggsIntoAppData = (data: AppData, incoming: Egg[]): AppData =>
     eggs: Array.from(byId.values()),
   }
 }
+
+export const receiveEggForNurturing = (data: AppData, uid: string, egg: Egg): AppData =>
+  activateEggForNurturing(mergeEggsIntoAppData(data, [egg]), uid, egg.id)
 
 export const appendEggToLocalData = (egg: Egg) => {
   const data = readData()
@@ -406,7 +453,7 @@ export const receiveEggLocally = (eggId: string, toUid: string, meetingContext: 
   }
 
   if (egg.currentOwnerUid === toUid) {
-    return data
+    return activateEggForNurturing(data, toUid, eggId)
   }
 
   const exchange = {
@@ -422,9 +469,13 @@ export const receiveEggLocally = (eggId: string, toUid: string, meetingContext: 
     item.id === eggId ? { ...item, currentOwnerUid: toUid } : item,
   )
 
-  return writeData({
-    ...data,
-    eggs,
-    exchanges: [exchange, ...data.exchanges],
-  })
+  return activateEggForNurturing(
+    writeData({
+      ...data,
+      eggs,
+      exchanges: [exchange, ...data.exchanges],
+    }),
+    toUid,
+    eggId,
+  )
 }

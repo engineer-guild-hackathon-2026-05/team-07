@@ -45,7 +45,7 @@ export function CharacterDetailPage({
               交換で受け取った卵を、ここで育てていきましょう
             </p>
             <Link
-              to="/exchange/scan"
+              to="/characters/receive"
               className="mt-1 flex h-9 items-center rounded-full bg-[#FF9B37] px-4 text-[12px] font-bold text-[#FFFCF4]"
             >
               卵を受け取る
