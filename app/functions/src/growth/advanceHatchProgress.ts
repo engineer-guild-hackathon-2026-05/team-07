@@ -9,7 +9,7 @@ import {
   type PassionDoc,
 } from "../types/firestore.js";
 
-export const HATCH_PROGRESS_PER_MESSAGE = 15;
+export const HATCH_PROGRESS_PER_MESSAGE = 50;
 export const HATCH_COMPLETE_LEVEL = 100;
 
 export type AdvanceHatchProgressInput = {

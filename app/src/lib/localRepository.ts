@@ -7,8 +7,8 @@ export const CURRENT_USER_ID = 'local-user-m-takahashi'
 /** 会場デモ用: 交換タブから受け取るサンプル卵（偏愛登録なしで用意済み） */
 export const DEMO_RECEIVABLE_EGG_ID = 'egg-guest-gift'
 
-/** デモ/ローカル: 1 回の会話で増える孵化進捗（%） */
-export const HATCH_PROGRESS_PER_MESSAGE = 15
+/** 1 回の会話で増える孵化進捗（%） */
+export const HATCH_PROGRESS_PER_MESSAGE = 50
 
 export const HATCH_COMPLETE_LEVEL = 100
 
