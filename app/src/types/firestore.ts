@@ -110,6 +110,10 @@ export interface PassionDoc {
   makingStatus?: "draft" | "interviewing" | "finalized";
   /** Extracted unique attractions of the passion subject */
   subjectAttractions?: string[];
+  /** Latest interview question for UI resume */
+  latestInterviewQuestion?: string;
+  /** Latest suggested quick-answer choices */
+  latestReplyChoices?: string[];
   /** Conversation history used in character-making deep-dive chat */
   chatHistory?: Array<{
     role: "user" | "assistant";

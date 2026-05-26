@@ -5,6 +5,9 @@ interface Props {
   disabled?: boolean
 }
 
+const BAR =
+  'absolute left-0 right-0 bottom-[calc(70px+env(safe-area-inset-bottom,0px))] z-10 flex items-center gap-2 px-4 py-3 bg-gradient-to-b from-[rgba(255,253,251,0)] to-surface md:sticky md:bottom-0 md:col-span-full md:px-8 md:pt-4 md:pb-6 md:border-t md:border-border'
+
 export function ChatInput({ onSend, disabled }: Props) {
   const [value, setValue] = useState('')
 
@@ -18,7 +21,7 @@ export function ChatInput({ onSend, disabled }: Props) {
   const canSend = value.trim().length > 0 && !disabled
 
   return (
-    <form className="chat-input-bar" onSubmit={handleSubmit}>
+    <form className={BAR} onSubmit={handleSubmit}>
       <input
         className={`flex-1 border rounded-full px-4 py-2.5 text-sm text-[#1f1f1f] bg-white outline-none shadow-sm transition-colors ${
           disabled

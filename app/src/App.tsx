@@ -1,30 +1,29 @@
 import type { ReactNode } from 'react'
 import { useMemo, useState } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import './App.css'
 import { BottomNav } from './features/components/BottomNav'
 import { useAuth } from './firebase/auth'
-import { getMyCharacters, getMyEggs, getMyPassions, loadAppData, resetDemoData } from './lib/localRepository'
+import { getMyCharacters, getMyEggs, getMyPassions, loadAppData } from './lib/localRepository'
 import { AddPassionPage } from './pages/AddPassion'
 import { CharacterDetailPage } from './pages/CharacterDetail'
 import { DevStylePage } from './pages/DevStyle'
 import { ExchangePage } from './pages/Exchange'
 import { ExchangeReceiveByIdPage } from './pages/ExchangeReceiveById'
 import { ExchangeWaitPage } from './pages/ExchangeWait'
-import { HomePage } from './pages/Home'
 import { LoginPage } from './pages/Login'
 import { PassionAiChatPage } from './pages/PassionAiChat'
+import { PassionEggCreatePage } from './pages/PassionEggCreate'
 import { ProfilePage } from './pages/Profile'
 import type { AppData, User } from './types/models'
 
 function LoadingScreen() {
   return (
-    <main className="app-shell">
-      <div className="app-frame">
-        <div className="login-screen">
-          <section className="login-card">
-            <p className="eyebrow">loading</p>
-            <h1>準備中...</h1>
+    <main className="min-h-svh text-left">
+      <div className="relative min-h-svh overflow-hidden bg-surface">
+        <div className="relative min-h-svh bg-white">
+          <section className="relative z-[1] grid justify-items-center gap-4 w-full px-7 py-12 text-center">
+            <p className="m-0 text-primary-strong text-xs font-extrabold tracking-widest uppercase">loading</p>
+            <h1 className="text-primary font-black tracking-wider text-3xl">準備中...</h1>
           </section>
         </div>
       </div>
@@ -65,11 +64,6 @@ function AppContent() {
     [data.exchanges, currentUid],
   )
 
-  const resetLocalDemo = () => {
-    setData(resetDemoData())
-    navigate('/')
-  }
-
   const handleLogout = async () => {
     await signOut()
     navigate('/login', { replace: true })
@@ -79,10 +73,17 @@ function AppContent() {
     return <LoadingScreen />
   }
 
+  const shellClass = user
+    ? 'min-h-svh text-left md:grid md:grid-cols-[240px_minmax(0,1fr)]'
+    : 'min-h-auto text-left overflow-visible'
+  const frameClass = user
+    ? 'relative min-h-svh overflow-hidden bg-surface md:min-h-svh md:overflow-hidden'
+    : 'relative min-h-auto h-auto overflow-visible bg-surface'
+
   return (
-    <main className={`app-shell${user ? ' app-shell--authenticated' : ''}`}>
+    <main className={shellClass}>
       {user ? <BottomNav firstCharacterId={characters[0]?.id} /> : null}
-      <div className="app-frame">
+      <div className={frameClass}>
         <Routes>
           <Route
             path="/login"
@@ -99,18 +100,7 @@ function AppContent() {
           />
           <Route
             path="/"
-            element={
-              <RequireAuth user={user}>
-                <HomePage
-                  user={user!}
-                  passions={passions}
-                  eggs={eggs}
-                  characters={characters}
-                  exchanges={exchanges}
-                  onReset={resetLocalDemo}
-                />
-              </RequireAuth>
-            }
+            element={<Navigate to="/characters" replace />}
           />
           <Route
             path="/passions/new"
@@ -125,6 +115,18 @@ function AppContent() {
             element={
               <RequireAuth user={user}>
                 <PassionAiChatPage userId={user?.uid ?? ''} />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/passions/:passionId/egg-create"
+            element={
+              <RequireAuth user={user}>
+                <PassionEggCreatePage
+                  userId={user?.uid ?? ''}
+                  userName={user?.name ?? 'guest'}
+                  onDataChange={setData}
+                />
               </RequireAuth>
             }
           />
@@ -199,7 +201,7 @@ function AppContent() {
             path="/characters"
             element={
               <RequireAuth user={user}>
-                <CharacterDetailPage eggs={eggs} characters={characters} userId={user?.uid ?? ''} />
+                <CharacterDetailPage eggs={eggs} characters={characters} userId={user?.uid ?? ''} user={user!} onLogout={handleLogout} />
               </RequireAuth>
             }
           />
@@ -207,7 +209,7 @@ function AppContent() {
             path="/characters/:characterId"
             element={
               <RequireAuth user={user}>
-                <CharacterDetailPage eggs={eggs} characters={characters} userId={user?.uid ?? ''} />
+                <CharacterDetailPage eggs={eggs} characters={characters} userId={user?.uid ?? ''} user={user!} onLogout={handleLogout} />
               </RequireAuth>
             }
           />

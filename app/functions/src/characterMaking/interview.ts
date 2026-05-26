@@ -1,8 +1,12 @@
-import { HttpsError, onCall } from "firebase-functions/v2/https";
-import { FieldValue } from "firebase-admin/firestore";
-import { db } from "../admin.js";
-import { COLLECTIONS, SUBCOLLECTIONS } from "../types/firestore.js";
-import type { PassionDoc, PassionMakingMessageDoc } from "../types/firestore.js";
+/* eslint-disable max-len */
+import {HttpsError, onCall} from "firebase-functions/v2/https";
+import {FieldValue} from "firebase-admin/firestore";
+import {db} from "../admin.js";
+import {COLLECTIONS, SUBCOLLECTIONS} from "../types/firestore.js";
+import type {PassionDoc, PassionMakingMessageDoc} from "../types/firestore.js";
+import makingStartPrompt from "../prompts/character_making_start.json";
+import makingTurnPrompt from "../prompts/character_making_turn.json";
+import makingFinalizePrompt from "../prompts/character_making_finalize.json";
 
 const OPENAI_API_URL = "https://api.openai.com/v1/responses";
 const DEFAULT_MODEL = "gpt-4.1-mini";
@@ -10,12 +14,31 @@ const HISTORY_LIMIT = 24;
 
 type OpenAIResponsesOutput = {
   output_text?: string;
+  output?: Array<{
+    content?: Array<{
+      text?: string;
+      refusal?: string;
+    }>;
+    refusal?: string;
+  }>;
+  error?: {
+    message?: string;
+  };
+};
+
+type InterviewTurn = {
+  question: string;
+  choices: string[];
 };
 
 type StartInterviewInput = { passionId: string };
 type ContinueInterviewInput = { passionId: string; userMessage: string };
 type FinalizeInterviewInput = { passionId: string };
 
+/**
+ * Returns OPENAI_API_KEY or throws if missing.
+ * @return {string} OpenAI API key.
+ */
 function requireApiKey(): string {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
@@ -24,11 +47,21 @@ function requireApiKey(): string {
   return apiKey;
 }
 
+/**
+ * Builds normalized overview text for interview prompts.
+ * @param {PassionDoc} passion Passion document.
+ * @return {string} Normalized overview.
+ */
 function buildOverview(passion: PassionDoc): string {
   const tags = passion.tags.length > 0 ? passion.tags.map((tag) => `#${tag}`).join(" ") : "#タグなし";
   return `タイトル: ${passion.title}\n概要: ${passion.description}\nタグ: ${tags}`;
 }
 
+/**
+ * Calls OpenAI Responses API and extracts displayable text.
+ * @param {Array<object>} input Prompt messages.
+ * @return {Promise<string>} Extracted text.
+ */
 async function callOpenAi(input: Array<{ role: "system" | "user" | "assistant"; content: string }>): Promise<string> {
   const apiKey = requireApiKey();
   const model = process.env.OPENAI_MODEL ?? DEFAULT_MODEL;
@@ -37,24 +70,70 @@ async function callOpenAi(input: Array<{ role: "system" | "user" | "assistant"; 
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
+      "Authorization": `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({ model, input }),
+    body: JSON.stringify({model, input}),
   });
 
   if (!response.ok) {
+    const body = await response.text();
+    console.error("characterMaking interview OpenAI API failed", {
+      status: response.status,
+      body,
+    });
     throw new HttpsError("internal", "AI応答の生成に失敗しました。");
   }
 
   const json = (await response.json()) as OpenAIResponsesOutput;
-  const text = json.output_text?.trim();
+  const text = [
+    json.output_text?.trim() ?? "",
+    ...(json.output ?? []).flatMap((item) => [
+      item.refusal?.trim() ?? "",
+      ...((item.content ?? []).map((part) => (part.text ?? part.refusal ?? "").trim())),
+    ]),
+  ]
+    .filter((value) => value.length > 0)
+    .join("\n")
+    .trim();
   if (!text) {
+    console.error("characterMaking interview OpenAI response had no text", {
+      hasOutputText: Boolean(json.output_text),
+      outputLength: json.output?.length ?? 0,
+      errorMessage: json.error?.message ?? "",
+    });
     throw new HttpsError("internal", "AI応答の生成に失敗しました。");
   }
 
   return text;
 }
 
+/**
+ * Parses interview turn JSON payload from model output.
+ * @param {string} text Raw model text.
+ * @return {InterviewTurn} Parsed question and choices.
+ */
+function parseInterviewTurn(text: string): InterviewTurn {
+  try {
+    const parsed = JSON.parse(text) as { question?: unknown; choices?: unknown };
+    const question = typeof parsed.question === "string" ? parsed.question.trim() : "";
+    const choices = Array.isArray(parsed.choices) ?
+      parsed.choices.filter((v): v is string => typeof v === "string").map((v) => v.trim()).filter((v) => v.length > 0).slice(0, 3) :
+      [];
+    if (question) {
+      return {question, choices};
+    }
+  } catch {
+    // fallback below
+  }
+  return {question: text.trim(), choices: []};
+}
+
+/**
+ * Loads passion and validates owner access.
+ * @param {string} uid Caller uid.
+ * @param {string} passionId Passion document id.
+ * @return {Promise<object>} Passion reference and document.
+ */
 async function getPassionOrThrow(uid: string, passionId: string) {
   const passionRef = db.collection(COLLECTIONS.PASSIONS).doc(passionId);
   const snap = await passionRef.get();
@@ -65,11 +144,11 @@ async function getPassionOrThrow(uid: string, passionId: string) {
   if (passion.ownerUid !== uid) {
     throw new HttpsError("permission-denied", "この偏愛にはアクセスできません。");
   }
-  return { passionRef, passion };
+  return {passionRef, passion};
 }
 
 export const startPassionInterview = onCall(
-  { region: "asia-northeast1" },
+  {region: "asia-northeast1"},
   async (request) => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "認証が必要です。");
@@ -81,7 +160,7 @@ export const startPassionInterview = onCall(
       throw new HttpsError("invalid-argument", "passionId は必須です。");
     }
 
-    const { passionRef, passion } = await getPassionOrThrow(uid, passionId);
+    const {passionRef, passion} = await getPassionOrThrow(uid, passionId);
     const overview = passion.overview?.trim() || buildOverview(passion);
 
     const messagesRef = passionRef.collection(SUBCOLLECTIONS.PASSION_MAKING_MESSAGES);
@@ -91,43 +170,60 @@ export const startPassionInterview = onCall(
       return {
         overview,
         messages: list.docs.map((d) => d.data() as PassionMakingMessageDoc),
+        choices: Array.isArray(passion.latestReplyChoices) ? passion.latestReplyChoices : [],
       };
     }
 
-    const assistantText = await callOpenAi([
+    const assistantRaw = await callOpenAi([
       {
         role: "system",
-        content:
-          "あなたは偏愛インタビュアーです。ユーザーの偏愛対象の魅力を抽出するため、短く具体的な質問を1つ返してください。",
+        content: makingStartPrompt.systemPrompt,
       },
       {
         role: "user",
-        content: `この偏愛の最初の質問を作ってください。\n${overview}`,
+        content: JSON.stringify({
+          task: "start_interview",
+          passion: {
+            passionId,
+            title: passion.title,
+            overview,
+            tags: passion.tags,
+          },
+          outputSchema: makingStartPrompt.outputSchema,
+        }),
       },
     ]);
+    const assistantTurn = parseInterviewTurn(assistantRaw);
 
     await db.runTransaction(async (tx) => {
       tx.set(
         passionRef,
-        { overview, makingStatus: "interviewing", subjectAttractions: passion.subjectAttractions ?? [] },
-        { merge: true },
+        {
+          overview,
+          makingStatus: "interviewing",
+          subjectAttractions: passion.subjectAttractions ?? [],
+          latestInterviewQuestion: assistantTurn.question,
+          latestReplyChoices: assistantTurn.choices,
+        },
+        {merge: true},
       );
       tx.set(messagesRef.doc(), {
         role: "assistant",
-        content: assistantText,
+        content: assistantTurn.question,
         createdAt: FieldValue.serverTimestamp(),
       });
     });
 
     return {
       overview,
-      messages: [{ role: "assistant", content: assistantText, createdAt: new Date().toISOString() }],
+      messages: [{role: "assistant", content: assistantTurn.question, createdAt: new Date().toISOString()}],
+      choices: assistantTurn.choices,
     };
   },
 );
 
 export const continuePassionInterview = onCall(
-  { region: "asia-northeast1" },
+  {region: "asia-northeast1"},
   async (request) => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "認証が必要です。");
@@ -140,40 +236,61 @@ export const continuePassionInterview = onCall(
       throw new HttpsError("invalid-argument", "passionId と userMessage は必須です。");
     }
 
-    const { passionRef, passion } = await getPassionOrThrow(uid, passionId);
+    const {passionRef, passion} = await getPassionOrThrow(uid, passionId);
     const overview = passion.overview?.trim() || buildOverview(passion);
     const messagesRef = passionRef.collection(SUBCOLLECTIONS.PASSION_MAKING_MESSAGES);
 
     const historySnap = await messagesRef.orderBy("createdAt", "desc").limit(HISTORY_LIMIT).get();
     const history = historySnap.docs.reverse().map((d) => {
       const msg = d.data() as PassionMakingMessageDoc;
-      return { role: msg.role, content: msg.content };
+      return {role: msg.role, content: msg.content};
     });
 
-    const assistantText = await callOpenAi([
+    const assistantRaw = await callOpenAi([
       {
         role: "system",
-        content:
-          "あなたは偏愛インタビュアーです。偏愛対象の魅力が具体化するように、自然な日本語で質問を1つ返してください。",
+        content: makingTurnPrompt.systemPrompt,
       },
-      { role: "user", content: `偏愛概要:\n${overview}` },
-      ...history,
-      { role: "user", content: userMessage },
+      {
+        role: "user",
+        content: JSON.stringify({
+          task: "continue_interview",
+          passion: {
+            passionId,
+            title: passion.title,
+            overview,
+            tags: passion.tags,
+          },
+          conversation: history,
+          userMessage,
+          outputSchema: makingTurnPrompt.outputSchema,
+        }),
+      },
     ]);
+    const assistantTurn = parseInterviewTurn(assistantRaw);
 
     const now = FieldValue.serverTimestamp();
     const batch = db.batch();
-    batch.set(messagesRef.doc(), { role: "user", content: userMessage, createdAt: now });
-    batch.set(messagesRef.doc(), { role: "assistant", content: assistantText, createdAt: now });
-    batch.set(passionRef, { overview, makingStatus: "interviewing" }, { merge: true });
+    batch.set(messagesRef.doc(), {role: "user", content: userMessage, createdAt: now});
+    batch.set(messagesRef.doc(), {role: "assistant", content: assistantTurn.question, createdAt: now});
+    batch.set(
+      passionRef,
+      {
+        overview,
+        makingStatus: "interviewing",
+        latestInterviewQuestion: assistantTurn.question,
+        latestReplyChoices: assistantTurn.choices,
+      },
+      {merge: true},
+    );
     await batch.commit();
 
-    return { reply: assistantText };
+    return {reply: assistantTurn.question, choices: assistantTurn.choices};
   },
 );
 
 export const finalizePassionInterview = onCall(
-  { region: "asia-northeast1" },
+  {region: "asia-northeast1"},
   async (request) => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "認証が必要です。");
@@ -185,7 +302,7 @@ export const finalizePassionInterview = onCall(
       throw new HttpsError("invalid-argument", "passionId は必須です。");
     }
 
-    const { passionRef, passion } = await getPassionOrThrow(uid, passionId);
+    const {passionRef, passion} = await getPassionOrThrow(uid, passionId);
     const overview = passion.overview?.trim() || buildOverview(passion);
     const messagesRef = passionRef.collection(SUBCOLLECTIONS.PASSION_MAKING_MESSAGES);
     const historySnap = await messagesRef.orderBy("createdAt", "asc").limit(60).get();
@@ -200,20 +317,29 @@ export const finalizePassionInterview = onCall(
     const extraction = await callOpenAi([
       {
         role: "system",
-        content:
-          "あなたは偏愛分析AIです。会話から偏愛対象の魅力を抽出します。JSONのみで {\"attractions\":[\"...\"]} を返してください。",
+        content: makingFinalizePrompt.systemPrompt,
       },
       {
         role: "user",
-        content: `偏愛概要:\n${overview}\n\n会話:\n${transcript}`,
+        content: JSON.stringify({
+          task: "extract_attractions",
+          passion: {
+            passionId,
+            title: passion.title,
+            overview,
+            tags: passion.tags,
+          },
+          transcript,
+          outputSchema: makingFinalizePrompt.outputSchema,
+        }),
       },
     ]);
 
     let attractions: string[] = [];
     try {
-      const parsed = JSON.parse(extraction) as { attractions?: unknown };
-      if (Array.isArray(parsed.attractions)) {
-        attractions = parsed.attractions
+      const parsed = JSON.parse(extraction) as { subjectAttractions?: unknown };
+      if (Array.isArray(parsed.subjectAttractions)) {
+        attractions = parsed.subjectAttractions
           .filter((v): v is string => typeof v === "string")
           .map((v) => v.trim())
           .filter((v) => v.length > 0)
@@ -232,10 +358,11 @@ export const finalizePassionInterview = onCall(
         overview,
         subjectAttractions: attractions,
         makingStatus: "finalized",
+        latestReplyChoices: [],
       },
-      { merge: true },
+      {merge: true},
     );
 
-    return { subjectAttractions: attractions };
+    return {subjectAttractions: attractions};
   },
 );

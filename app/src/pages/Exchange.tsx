@@ -1,9 +1,11 @@
 import type { FormEvent } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore'
 import { Button, Card, StackedActionButton, TextField, Textarea } from '../components/ui'
 import { ExchangePreviewCard } from '../features/components/ExchangePreviewCard'
 import { EggArt } from '../features/components/EggArt'
+import { db } from '../firebase/firebase'
 import {
   buildLineShareUrl,
   buildShareText,
@@ -12,7 +14,9 @@ import {
 } from '../lib/exchangeShare'
 import { formatShortDate, getCharacterForEgg, getPassionForEgg } from '../lib/viewHelpers'
 import { receiveEggLocally } from '../lib/localRepository'
+import { COLLECTIONS } from '../types/firestore'
 import {
+  buildReceiveUrlForExchange,
   callCreateUrlExchange,
   ensureEggInFirestore,
 } from '../firebase/exchange'
@@ -80,10 +84,49 @@ export function ExchangePage({
   const [receiveStatus, setReceiveStatus] = useState('')
   const [isPublishing, setIsPublishing] = useState(false)
   const [publishError, setPublishError] = useState('')
+  const [publishedExchangeId, setPublishedExchangeId] = useState('')
+  const [publishedEggName, setPublishedEggName] = useState('')
+  const [remoteOwnedEggs, setRemoteOwnedEggs] = useState<Egg[]>([])
+  const [remotePassions, setRemotePassions] = useState<Passion[]>([])
+  const [remoteCharacters, setRemoteCharacters] = useState<Character[]>([])
 
-  const selectedEgg = eggs.find((egg) => egg.id === selectedEggId) ?? eggs[0]
-  const selectedPassion = selectedEgg ? getPassionForEgg(allPassions, selectedEgg) : undefined
-  const selectedCharacter = selectedEgg ? getCharacterForEgg(characters, selectedEgg) : undefined
+  const ownedEggs = useMemo(() => {
+    const merged = [...eggs, ...remoteOwnedEggs]
+    const seen = new Set<string>()
+    return merged.filter((egg) => {
+      if (seen.has(egg.id)) {
+        return false
+      }
+      seen.add(egg.id)
+      return true
+    })
+  }, [eggs, remoteOwnedEggs])
+  const mergedPassions = useMemo(() => {
+    const merged = [...allPassions, ...remotePassions]
+    const seen = new Set<string>()
+    return merged.filter((passion) => {
+      if (seen.has(passion.id)) {
+        return false
+      }
+      seen.add(passion.id)
+      return true
+    })
+  }, [allPassions, remotePassions])
+  const mergedCharacters = useMemo(() => {
+    const merged = [...characters, ...remoteCharacters]
+    const seen = new Set<string>()
+    return merged.filter((character) => {
+      if (seen.has(character.id)) {
+        return false
+      }
+      seen.add(character.id)
+      return true
+    })
+  }, [characters, remoteCharacters])
+
+  const selectedEgg = ownedEggs.find((egg) => egg.id === selectedEggId) ?? ownedEggs[0]
+  const selectedPassion = selectedEgg ? getPassionForEgg(mergedPassions, selectedEgg) : undefined
+  const selectedCharacter = selectedEgg ? getCharacterForEgg(mergedCharacters, selectedEgg) : undefined
 
   const receiveEgg = useMemo(() => {
     if (!receiveEggId) {
@@ -113,12 +156,153 @@ export function ExchangePage({
 
   const shareText = shareInput ? buildShareText(shareInput) : ''
   const lineShareUrl = shareText ? buildLineShareUrl(shareText) : ''
+  const publishedReceiveUrl = publishedExchangeId
+    ? buildReceiveUrlForExchange(publishedExchangeId)
+    : ''
 
   useEffect(() => {
-    if (eggs.length > 0 && !eggs.some((egg) => egg.id === selectedEggId)) {
-      setSelectedEggId(eggs[0].id)
+    if (ownedEggs.length > 0 && !ownedEggs.some((egg) => egg.id === selectedEggId)) {
+      setSelectedEggId(ownedEggs[0].id)
     }
-  }, [eggs, selectedEggId])
+  }, [ownedEggs, selectedEggId])
+
+  useEffect(() => {
+    if (!userId) {
+      setRemoteOwnedEggs([])
+      return
+    }
+
+    const loadOwnedEggs = async () => {
+      const eggsRef = collection(db, COLLECTIONS.EGGS)
+      const q = query(eggsRef, where('currentOwnerUid', '==', userId))
+      const snap = await getDocs(q)
+      const fetchedEggs: Egg[] = snap.docs.map((docSnap) => {
+        const data = docSnap.data() as {
+          sourceUserUid?: unknown
+          basedOnPassionIds?: unknown
+          basedOnPassionId?: unknown
+          characterPrompt?: unknown
+          hatchLevel?: unknown
+          createdAt?: unknown
+          currentOwnerUid?: unknown
+          name?: unknown
+          color?: unknown
+          motif?: unknown
+        }
+        const basedOnPassionIds = Array.isArray(data.basedOnPassionIds)
+          ? data.basedOnPassionIds.filter((v): v is string => typeof v === 'string')
+          : typeof data.basedOnPassionId === 'string' && data.basedOnPassionId
+            ? [data.basedOnPassionId]
+            : []
+        return {
+          id: docSnap.id,
+          sourceUserUid: typeof data.sourceUserUid === 'string' ? data.sourceUserUid : userId,
+          basedOnPassionIds,
+          characterPrompt: typeof data.characterPrompt === 'string' ? data.characterPrompt : '',
+          hatchLevel: typeof data.hatchLevel === 'number' ? data.hatchLevel : 0,
+          createdAt: new Date().toISOString(),
+          currentOwnerUid: typeof data.currentOwnerUid === 'string' ? data.currentOwnerUid : userId,
+          name: typeof data.name === 'string' && data.name ? data.name : 'たまご',
+          color: typeof data.color === 'string' && data.color ? data.color : '#FF9B37',
+          motif: data.motif === 'fox' || data.motif === 'cat' || data.motif === 'bird' ? data.motif : 'egg',
+        }
+      })
+      setRemoteOwnedEggs(fetchedEggs)
+    }
+
+    void loadOwnedEggs().catch(() => setRemoteOwnedEggs([]))
+  }, [userId])
+
+  useEffect(() => {
+    const missingPassionIds = Array.from(
+      new Set(
+        ownedEggs
+          .flatMap((egg) => egg.basedOnPassionIds)
+          .filter((id) => !allPassions.some((passion) => passion.id === id)),
+      ),
+    )
+    const missingCharacterEggIds = ownedEggs
+      .map((egg) => egg.id)
+      .filter((eggId) => !characters.some((character) => character.eggId === eggId))
+
+    if (missingPassionIds.length === 0) {
+      setRemotePassions([])
+    }
+    if (missingCharacterEggIds.length === 0) {
+      setRemoteCharacters([])
+    }
+    if (missingPassionIds.length === 0 && missingCharacterEggIds.length === 0) {
+      return
+    }
+
+    const loadRemoteMenuData = async () => {
+      const fetchedPassions = await Promise.all(
+        missingPassionIds.map(async (passionId) => {
+          const ref = doc(db, COLLECTIONS.PASSIONS, passionId)
+          const snap = await getDoc(ref)
+          if (!snap.exists()) {
+            return null
+          }
+          const data = snap.data() as {
+            ownerUid?: unknown
+            title?: unknown
+            description?: unknown
+            tags?: unknown
+            visibility?: unknown
+          }
+          return {
+            id: snap.id,
+            ownerUid: typeof data.ownerUid === 'string' ? data.ownerUid : '',
+            title: typeof data.title === 'string' ? data.title : '偏愛タイトル未設定',
+            description: typeof data.description === 'string' ? data.description : '',
+            tags: Array.isArray(data.tags) ? data.tags.filter((v): v is string => typeof v === 'string') : [],
+            createdAt: new Date().toISOString(),
+            visibility: data.visibility === 'friends' || data.visibility === 'private' ? data.visibility : 'public',
+          } satisfies Passion
+        }),
+      )
+      setRemotePassions(fetchedPassions.filter((passion): passion is Passion => passion !== null))
+
+      const fetchedCharacters = await Promise.all(
+        missingCharacterEggIds.map(async (eggId) => {
+          const ref = doc(db, COLLECTIONS.CHARACTERS, eggId)
+          const snap = await getDoc(ref)
+          if (!snap.exists()) {
+            return null
+          }
+          const data = snap.data() as {
+            eggId?: unknown
+            name?: unknown
+            personality?: unknown
+            knowledgeAreas?: unknown
+            growthLevel?: unknown
+            affinityScore?: unknown
+            unlockedTopics?: unknown
+          }
+          return {
+            id: snap.id,
+            eggId: typeof data.eggId === 'string' ? data.eggId : eggId,
+            name: typeof data.name === 'string' ? data.name : 'キャラ未設定',
+            personality: typeof data.personality === 'string' ? data.personality : '',
+            knowledgeAreas: Array.isArray(data.knowledgeAreas)
+              ? data.knowledgeAreas.filter((v): v is string => typeof v === 'string')
+              : [],
+            growthLevel: typeof data.growthLevel === 'number' ? data.growthLevel : 1,
+            affinityScore: typeof data.affinityScore === 'number' ? data.affinityScore : 0,
+            unlockedTopics: Array.isArray(data.unlockedTopics)
+              ? data.unlockedTopics.filter((v): v is string => typeof v === 'string')
+              : [],
+          } satisfies Character
+        }),
+      )
+      setRemoteCharacters(fetchedCharacters.filter((character): character is Character => character !== null))
+    }
+
+    void loadRemoteMenuData().catch(() => {
+      setRemotePassions([])
+      setRemoteCharacters([])
+    })
+  }, [ownedEggs, allPassions, characters])
 
   useEffect(() => {
     if (!shareStatus) {
@@ -229,7 +413,9 @@ export function ExchangePage({
     try {
       await ensureEggInFirestore(selectedEgg, userId)
       const { exchangeId } = await callCreateUrlExchange(selectedEgg.id)
-      navigate(`/exchange/wait/${exchangeId}`)
+      setPublishedExchangeId(exchangeId)
+      setPublishedEggName(selectedEgg.name)
+      setShareStatus('URLを発行しました')
     } catch (error: unknown) {
       const code = (error as { code?: string })?.code ?? ''
       const message = (error as { message?: string })?.message ?? '不明なエラー'
@@ -317,14 +503,30 @@ export function ExchangePage({
   return (
     <div className="screen exchange-screen">
       <Card className="exchange-hero">
-        <p className="eyebrow">exch-01 / exch-02</p>
-        <h1>卵を交換する</h1>
-        <p>偏愛のお品書きを添えて渡す。会場ではQR、離れた相手にはLINE共有。</p>
-        <div className="segment-tabs">
-          <Link to="/exchange/share" className={isShareMode ? 'is-active' : ''}>
+        <h1 className="m-0 text-text-heading text-3xl font-black">交換</h1>
+        <p className="m-0 text-text-heading text-lg font-extrabold">卵を交換する</p>
+        <p className="m-0 text-text text-sm leading-relaxed">
+          偏愛のお品書きを添えて渡す。会場ではQR、離れた相手にはLINE共有。
+        </p>
+        <div className="grid grid-cols-2 gap-1.5 rounded-[18px] bg-[#fff1df] p-1.5">
+          <Link
+            to="/exchange/share"
+            className={`grid place-items-center min-h-[44px] rounded-[14px] text-sm font-black transition-all ${
+              isShareMode
+                ? 'bg-white text-primary-strong shadow-[0_4px_14px_rgba(231,115,0,0.14)]'
+                : 'bg-transparent text-primary-strong/55 hover:text-primary-strong/80'
+            }`}
+          >
             渡す
           </Link>
-          <Link to="/exchange/scan" className={location.pathname.startsWith('/exchange/scan') ? 'is-active' : ''}>
+          <Link
+            to="/exchange/scan"
+            className={`grid place-items-center min-h-[44px] rounded-[14px] text-sm font-black transition-all ${
+              location.pathname.startsWith('/exchange/scan')
+                ? 'bg-white text-primary-strong shadow-[0_4px_14px_rgba(231,115,0,0.14)]'
+                : 'bg-transparent text-primary-strong/55 hover:text-primary-strong/80'
+            }`}
+          >
             読み取る
           </Link>
         </div>
@@ -332,16 +534,43 @@ export function ExchangePage({
 
       {isShareMode ? (
         <section className="exchange-share-panel">
-          <label className="field compact-field">
-            <span>渡す卵を選ぶ</span>
-            <select value={selectedEgg?.id ?? ''} onChange={(event) => setSelectedEggId(event.target.value)}>
-              {eggs.map((egg) => (
-                <option value={egg.id} key={egg.id}>
-                  {egg.name} / 孵化 {egg.hatchLevel}%
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="grid gap-2">
+            <span className="text-sm font-extrabold text-text-heading">渡す卵を選ぶ</span>
+            {ownedEggs.length > 0 ? (
+              <div
+                className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1 snap-x snap-mandatory [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                role="listbox"
+                aria-label="渡す卵を選ぶ"
+              >
+                {ownedEggs.map((egg) => {
+                  const isSelected = egg.id === selectedEggId
+
+                  return (
+                    <button
+                      key={egg.id}
+                      type="button"
+                      role="option"
+                      aria-selected={isSelected}
+                      aria-label={egg.name}
+                      onClick={() => setSelectedEggId(egg.id)}
+                      className={`shrink-0 snap-start grid w-[100px] gap-2 place-items-center rounded-3xl border p-3 pt-4 text-center transition-all ${
+                        isSelected
+                          ? 'border-primary-strong bg-white shadow-[0_8px_22px_rgba(231,115,0,0.16)]'
+                          : 'border-[rgba(255,155,55,0.12)] bg-[#fff8f0] hover:border-[rgba(255,155,55,0.28)]'
+                      }`}
+                    >
+                      <div className="grid h-[82px] w-[66px] place-items-center">
+                        <EggArt egg={egg} label="" />
+                      </div>
+                      <strong className="max-w-full truncate text-xs font-black text-text-heading">{egg.name}</strong>
+                    </button>
+                  )
+                })}
+              </div>
+            ) : (
+              <p className="status-message">渡せる卵がありません。先に偏愛を登録してください。</p>
+            )}
+          </div>
 
           {selectedEgg ? (
             <ExchangePreviewCard
@@ -412,6 +641,21 @@ export function ExchangePage({
                   <p className="status-message" style={{ color: '#c0392b' }}>
                     {publishError}
                   </p>
+                ) : null}
+                {publishedReceiveUrl ? (
+                  <Card>
+                    <p className="status-message">発行済みURL（{publishedEggName || '選択中の卵'}）</p>
+                    <p className="share-code">
+                      <strong style={{ wordBreak: 'break-all' }}>{publishedReceiveUrl}</strong>
+                    </p>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => navigate(`/exchange/wait/${publishedExchangeId}`)}
+                    >
+                      受け取り待機画面を開く
+                    </Button>
+                  </Card>
                 ) : null}
 
                 <StackedActionButton
@@ -518,18 +762,6 @@ export function ExchangePage({
           </form>
         </section>
       ) : null}
-
-      <div className="egg-scroll">
-        {eggs.map((egg) => (
-          <article className="mini-card" key={egg.id}>
-            <EggArt egg={egg} />
-            <div>
-              <strong>{egg.name}</strong>
-              <p>孵化 {egg.hatchLevel}%</p>
-            </div>
-          </article>
-        ))}
-      </div>
 
       <Card>
         <h2>交換履歴</h2>
