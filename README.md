@@ -61,8 +61,8 @@
 | 種別 | URL |
 |---|---|
 | デモ環境 | https://egh-team7.web.app/ |
-| プレゼン資料 | https://canva.link/j4vcyo2efl1bmt8 |
-| デモ動画 |  |
+| プレゼン資料 | https://canva.link/ab6m6w46v8nfum4 |
+| デモ動画 | https://drive.google.com/drive/folders/1BD233soPv__fYqfZ7EHZXHOleE2Tar8Y?usp=drive_link |
 
 ## 技術スタック
 

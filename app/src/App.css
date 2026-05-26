@@ -56,7 +56,7 @@ body:has(.app-shell--authenticated) #root {
 
   .screen {
     @apply h-full min-h-svh overflow-y-auto box-border pt-[28px] pr-[22px] pl-[22px];
-    padding-bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px) + 20px);
+    padding-bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px) + 88px);
     scrollbar-width: none;
     -ms-overflow-style: none;
   }

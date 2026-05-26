@@ -122,7 +122,8 @@ export function ExchangeWaitPage() {
 
       <Card>
         <p className="status-message">
-          受け取りリンクは <strong>1回使い切り</strong>、発行から <strong>24時間</strong>で失効します。
+          受け取りリンクは <strong>発行から24時間</strong> 有効です。
+          期間内なら複数の相手が受け取れます。
         </p>
         {status === 'waiting' ? (
           <p className="status-message">相手の受け取りを待機中...</p>
