@@ -1,12 +1,14 @@
 import type { ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
+import { generateAiReply } from '../lib/aiReply'
 import {
   continuePassionInterview,
   finalizePassionInterview,
   loadMakingMessages,
   startPassionInterview,
 } from '../lib/passionInterview'
+import { loadPassionProfile } from '../lib/passionRepository'
 import type { PassionChatMessage } from '../lib/passionRepository'
 
 type PassionAiChatPageProps = {
@@ -14,6 +16,7 @@ type PassionAiChatPageProps = {
 }
 
 const QUICK_REPLIES = ['夜に聴くのが好き', 'ひとりの時間が好き', '誰かに勧めたい']
+const FALLBACK_FIRST_MESSAGE = 'まず、あなたの偏愛対象をひとことで表すと何ですか？'
 
 export function PassionAiChatPage({ userId }: PassionAiChatPageProps) {
   const navigate = useNavigate()
@@ -25,6 +28,7 @@ export function PassionAiChatPage({ userId }: PassionAiChatPageProps) {
   const [errorMessage, setErrorMessage] = useState('')
   const [quickReplies, setQuickReplies] = useState<string[]>(QUICK_REPLIES)
   const scrollRef = useRef<HTMLDivElement | null>(null)
+  const hasUserMessage = messages.some((message) => message.role === 'user')
 
   useEffect(() => {
     if (!passionId) {
@@ -40,12 +44,46 @@ export function PassionAiChatPage({ userId }: PassionAiChatPageProps) {
         }
 
         const started = await startPassionInterview(passionId)
-        setMessages(started.messages)
+        if (started.messages.length > 0) {
+          setMessages(started.messages)
+        } else {
+          setMessages([
+            {
+              role: 'assistant',
+              content: FALLBACK_FIRST_MESSAGE,
+              createdAt: new Date().toISOString(),
+            },
+          ])
+        }
         if (started.choices && started.choices.length > 0) {
           setQuickReplies(started.choices)
         }
       } catch {
-        setErrorMessage('初期化に失敗しました。時間をおいて再試行してください。')
+        try {
+          const profile = await loadPassionProfile(passionId)
+          const firstQuestion = await generateAiReply({
+            promptType: 'character_making',
+            message: 'フォーム入力をもとに、最初の深掘り質問を1つだけしてください。',
+            context: `passionId=${passionId}\noverview=${profile.overview}`,
+          })
+          setMessages([
+            {
+              role: 'assistant',
+              content: firstQuestion || FALLBACK_FIRST_MESSAGE,
+              createdAt: new Date().toISOString(),
+            },
+          ])
+          setQuickReplies([])
+        } catch {
+          setMessages([
+            {
+              role: 'assistant',
+              content: FALLBACK_FIRST_MESSAGE,
+              createdAt: new Date().toISOString(),
+            },
+          ])
+          setQuickReplies([])
+        }
       }
     }
 
@@ -283,7 +321,7 @@ export function PassionAiChatPage({ userId }: PassionAiChatPageProps) {
       </div>
 
       {/* Quick replies */}
-      {messages.length > 0 && !isSending ? (
+      {messages.length > 0 && hasUserMessage && !isSending ? (
         <div
           style={{
             padding: '6px 16px 4px',
