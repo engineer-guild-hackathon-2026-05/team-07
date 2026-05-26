@@ -140,6 +140,12 @@ export interface EggDoc {
   createdAt: DateLike;
   /** UID of the user currently holding the egg */
   currentOwnerUid: string;
+  /** Display name of the egg (e.g. コダワリス) */
+  name?: string;
+  /** Egg shell color */
+  color?: string;
+  /** Visual motif for the egg illustration */
+  motif?: 'egg' | 'fox' | 'cat' | 'bird';
 }
 
 /**
