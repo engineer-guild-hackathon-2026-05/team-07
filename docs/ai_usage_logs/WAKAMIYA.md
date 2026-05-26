@@ -1,4 +1,4 @@
-# AI 活用ログ — Team {{TEAM_NUMBER}}
+ # AI 活用ログ — Team {{TEAM_NUMBER}}
 
 > 記入者: WAKAMIYA（ChatGPTで記入）
 
