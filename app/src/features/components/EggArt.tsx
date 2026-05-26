@@ -12,7 +12,7 @@ export function EggArt({ egg, label }: { egg?: Pick<Egg, 'color' | 'name'>; labe
       <img
         src={eggImage}
         alt={displayLabel ?? 'たまご'}
-        className="w-[88%] h-[88%] object-contain drop-shadow-[0_8px_12px_rgba(73,73,73,0.14)]"
+        className="w-[88%] h-[88%] object-cover drop-shadow-[0_8px_12px_rgba(73,73,73,0.14)]"
       />
       {displayLabel ? (
         <strong className="absolute bottom-1.5 z-[1] max-w-[calc(100%-8px)] overflow-hidden text-ellipsis whitespace-nowrap px-1.5 py-0.5 rounded-full text-text-heading bg-[rgba(255,255,255,0.88)] text-[9px] font-black">
