@@ -1,9 +1,23 @@
 import type { ReactNode } from 'react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { BottomNav } from './features/components/BottomNav'
-import { useAuth } from './firebase/auth'
-import { getMyCharacters, getMyEggs, getMyPassions, loadAppData } from './lib/localRepository'
+import { demoUser, useAuth } from './firebase/auth'
+import { fetchMyCharactersFromFirestore } from './lib/characterRepository'
+import { fetchEggFromFirestore, fetchMyEggsFromFirestore } from './lib/eggRepository'
+import {
+  CURRENT_USER_ID,
+  getMyCharacters,
+  getMyEggs,
+  getMyNurturingCharacters,
+  getMyNurturingEggs,
+  getMyPassions,
+  getMyUnassignedEggs,
+  loadAppData,
+  receiveEggForNurturing,
+  resetDemoData,
+  syncFirestoreGrowthToLocalData,
+} from './lib/localRepository'
 import { AddPassionPage } from './pages/AddPassion'
 import { CharacterDetailPage } from './pages/CharacterDetail'
 import { DevStylePage } from './pages/DevStyle'
@@ -13,6 +27,7 @@ import { ExchangeWaitPage } from './pages/ExchangeWait'
 import { LoginPage } from './pages/Login'
 import { PassionAiChatPage } from './pages/PassionAiChat'
 import { PassionEggCreatePage } from './pages/PassionEggCreate'
+import { ReceiveEggSetupPage } from './pages/ReceiveEggSetup'
 import { ProfilePage } from './pages/Profile'
 import type { AppData, User } from './types/models'
 
@@ -58,7 +73,54 @@ function AppContent() {
   const currentUid = user?.uid ?? ''
   const passions = useMemo(() => (currentUid ? getMyPassions(data, currentUid) : []), [data, currentUid])
   const eggs = useMemo(() => (currentUid ? getMyEggs(data, currentUid) : []), [data, currentUid])
+  const nurturingEggs = useMemo(
+    () => (currentUid ? getMyNurturingEggs(data, currentUid) : []),
+    [data, currentUid],
+  )
+  const unassignedEggs = useMemo(
+    () => (currentUid ? getMyUnassignedEggs(data, currentUid) : []),
+    [data, currentUid],
+  )
   const characters = useMemo(() => (currentUid ? getMyCharacters(data, currentUid) : []), [data, currentUid])
+  const nurturingCharacters = useMemo(
+    () => (currentUid ? getMyNurturingCharacters(data, currentUid) : []),
+    [data, currentUid],
+  )
+
+  useEffect(() => {
+    if (!user?.uid) {
+      return
+    }
+
+    if (user.uid === CURRENT_USER_ID || user.uid === demoUser.uid) {
+      setData(resetDemoData())
+      return
+    }
+
+    let cancelled = false
+    Promise.all([fetchMyEggsFromFirestore(user.uid), fetchMyCharactersFromFirestore(user.uid)])
+      .then(([firestoreEggs, firestoreCharacters]) => {
+        if (cancelled) {
+          return
+        }
+        if (firestoreEggs.length === 0 && firestoreCharacters.length === 0) {
+          return
+        }
+        setData(syncFirestoreGrowthToLocalData(firestoreEggs, firestoreCharacters))
+      })
+      .catch(() => {})
+
+    return () => {
+      cancelled = true
+    }
+  }, [user?.uid])
+
+  const handleEggReceived = async (eggId: string) => {
+    const egg = await fetchEggFromFirestore(eggId)
+    if (egg && user?.uid) {
+      setData((prev) => receiveEggForNurturing(prev, user.uid, egg))
+    }
+  }
   const exchanges = useMemo(
     () => data.exchanges.filter((exchange) => exchange.fromUid === currentUid || exchange.toUid === currentUid),
     [data.exchanges, currentUid],
@@ -82,7 +144,7 @@ function AppContent() {
 
   return (
     <main className={shellClass}>
-      {user ? <BottomNav firstCharacterId={characters[0]?.id} /> : null}
+      {user ? <BottomNav firstCharacterId={nurturingCharacters[0]?.id ?? nurturingEggs[0]?.id} /> : null}
       <div className={frameClass}>
         <Routes>
           <Route
@@ -193,7 +255,23 @@ function AppContent() {
             path="/exchange/receive/:exchangeId"
             element={
               <RequireAuth user={user}>
-                <ExchangeReceiveByIdPage isAuthenticated={Boolean(user)} />
+                <ExchangeReceiveByIdPage
+                  isAuthenticated={Boolean(user)}
+                  onEggReceived={handleEggReceived}
+                />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/characters/receive"
+            element={
+              <RequireAuth user={user}>
+                <ReceiveEggSetupPage
+                  data={data}
+                  unassignedEggs={unassignedEggs}
+                  userId={currentUid}
+                  onDataChange={setData}
+                />
               </RequireAuth>
             }
           />
@@ -201,7 +279,14 @@ function AppContent() {
             path="/characters"
             element={
               <RequireAuth user={user}>
-                <CharacterDetailPage eggs={eggs} characters={characters} userId={user?.uid ?? ''} user={user!} onLogout={handleLogout} />
+                <CharacterDetailPage
+                  eggs={nurturingEggs}
+                  characters={nurturingCharacters}
+                  userId={user?.uid ?? ''}
+                  user={user!}
+                  onDataChange={setData}
+                  onLogout={handleLogout}
+                />
               </RequireAuth>
             }
           />
@@ -209,7 +294,14 @@ function AppContent() {
             path="/characters/:characterId"
             element={
               <RequireAuth user={user}>
-                <CharacterDetailPage eggs={eggs} characters={characters} userId={user?.uid ?? ''} user={user!} onLogout={handleLogout} />
+                <CharacterDetailPage
+                  eggs={nurturingEggs}
+                  characters={nurturingCharacters}
+                  userId={user?.uid ?? ''}
+                  user={user!}
+                  onDataChange={setData}
+                  onLogout={handleLogout}
+                />
               </RequireAuth>
             }
           />
@@ -221,7 +313,7 @@ function AppContent() {
                   user={user!}
                   passions={passions}
                   eggs={eggs}
-                  characters={characters}
+                  characters={nurturingCharacters}
                   exchanges={exchanges}
                   onLogout={handleLogout}
                 />

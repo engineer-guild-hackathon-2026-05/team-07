@@ -58,8 +58,8 @@ export const resolveCharacterAssetKey = (egg?: CharacterVisualInput): CharacterA
 }
 
 export const resolveCharacterImage = (egg?: CharacterVisualInput) => {
-  if (!egg || egg.motif === 'egg') {
-    return eggImage
+  if (!egg) {
+    return CHARACTER_SPRITES.pink
   }
 
   return CHARACTER_SPRITES[resolveCharacterAssetKey(egg)]

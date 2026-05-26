@@ -13,7 +13,7 @@ import {
   shareViaNativeSheet,
 } from '../lib/exchangeShare'
 import { formatShortDate, getCharacterForEgg, getPassionForEgg } from '../lib/viewHelpers'
-import { receiveEggLocally } from '../lib/localRepository'
+import { CURRENT_USER_ID, DEMO_RECEIVABLE_EGG_ID, receiveEggLocally } from '../lib/localRepository'
 import { COLLECTIONS } from '../types/firestore'
 import {
   buildReceiveUrlForExchange,
@@ -138,6 +138,10 @@ export function ExchangePage({
 
   const receivePassion = receiveEgg ? getPassionForEgg(allPassions, receiveEgg) : undefined
   const receiveCharacter = receiveEgg ? getCharacterForEgg(characters, receiveEgg) : undefined
+  const demoReceiveEgg = allEggs.find((egg) => egg.id === DEMO_RECEIVABLE_EGG_ID)
+  const canDemoReceive =
+    userId === CURRENT_USER_ID &&
+    Boolean(demoReceiveEgg && demoReceiveEgg.currentOwnerUid !== userId)
 
   const resolvedMeetingContext = customMeetingContext.trim() || meetingContext
   const canNativeShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function'
@@ -462,7 +466,7 @@ export function ExchangePage({
 
     onDataChange(nextData)
     setReceiveStatus('受け取り完了！育成画面で会いに行こう')
-    window.setTimeout(() => navigate('/'), 1800)
+    window.setTimeout(() => navigate(`/characters/${receiveEgg.id}`), 1200)
   }
 
   if (isReceiveMode) {
@@ -483,7 +487,7 @@ export function ExchangePage({
             />
             <Card className="exchange-receive-actions">
               <p className="status-message">
-                受け取ると、この卵とキャラクターがあなたのホームに加わります。
+                受け取ると、この卵が育成画面に加わります。話しかけて孵化させましょう。
               </p>
               <Button type="button" onClick={handleReceive}>
                 {receiveEgg.currentOwnerUid === userId ? 'すでに受け取り済み' : 'この卵を受け取る'}
@@ -754,12 +758,27 @@ export function ExchangePage({
               label="読み取りコードを手入力"
               value={manualCode}
               onChange={(event) => setManualCode(event.target.value)}
-              placeholder="例: egg-sample-radio"
+              placeholder="例: egg-guest-gift"
             />
             <Button type="submit" variant="secondary">
               読み取り扱いにする
             </Button>
           </form>
+
+          {canDemoReceive && demoReceiveEgg ? (
+            <Card className="exchange-card">
+              <p className="m-0 text-sm font-extrabold text-text-heading">デモ: 卵を受け取る</p>
+              <p className="mt-2 mb-3 text-xs leading-relaxed text-text">
+                会場デモでは、QR の代わりにこちらから「タビトル」の卵を受け取れます。受け取ると育成画面で卵が表示されます。
+              </p>
+              <Link
+                to={`/exchange/receive?egg=${demoReceiveEgg.id}`}
+                className="inline-flex h-10 items-center rounded-full bg-[#FF9B37] px-4 text-xs font-bold text-[#FFFCF4]"
+              >
+                {demoReceiveEgg.name}の卵を受け取る
+              </Link>
+            </Card>
+          ) : null}
         </section>
       ) : null}
 

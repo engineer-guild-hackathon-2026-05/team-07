@@ -1,10 +1,11 @@
 import type { Egg } from '../../types/models'
-import { heroPedestal, resolveCharacterImage, resolveCharacterLabel } from '../../lib/characterAssets'
+import { heroPedestal, eggImage, resolveCharacterImage, resolveCharacterLabel } from '../../lib/characterAssets'
 
 type CharacterIllustrationProps = {
   alt?: string
   className?: string
   egg?: Pick<Egg, 'motif' | 'color' | 'id' | 'name'>
+  showAsEgg?: boolean
   showPedestal?: boolean
   size?: 'small' | 'medium' | 'large' | 'featured'
 }
@@ -20,11 +21,12 @@ export function CharacterIllustration({
   alt,
   className = '',
   egg,
+  showAsEgg = false,
   showPedestal = false,
   size = 'large',
 }: CharacterIllustrationProps) {
-  const image = resolveCharacterImage(egg)
-  const label = alt ?? resolveCharacterLabel(egg)
+  const image = showAsEgg ? eggImage : resolveCharacterImage(egg)
+  const label = alt ?? (showAsEgg ? `${resolveCharacterLabel(egg)}の卵` : resolveCharacterLabel(egg))
 
   return (
     <div

@@ -1,8 +1,16 @@
 import type { AppData, Character, Egg, Passion, PassionInput, User } from '../types/models'
 
-const STORAGE_KEY = 'henai-local-mvp-data'
+export const STORAGE_KEY = 'henai-local-mvp-data'
 
 export const CURRENT_USER_ID = 'local-user-m-takahashi'
+
+/** 会場デモ用: 交換タブから受け取るサンプル卵（偏愛登録なしで用意済み） */
+export const DEMO_RECEIVABLE_EGG_ID = 'egg-guest-gift'
+
+/** デモ/ローカル: 1 回の会話で増える孵化進捗（%） */
+export const HATCH_PROGRESS_PER_MESSAGE = 15
+
+export const HATCH_COMPLETE_LEVEL = 100
 
 const now = () => new Date().toISOString()
 
@@ -42,15 +50,30 @@ const guestPassion: Passion = {
   visibility: 'public',
 }
 
-const sampleEgg: Egg = {
-  id: 'egg-sample-radio',
-  sourceUserUid: CURRENT_USER_ID,
+/** デモ/本番共通: 交換で受け取れるサンプル卵（初期所有者は guest） */
+const demoReceivableEgg: Egg = {
+  id: DEMO_RECEIVABLE_EGG_ID,
+  sourceUserUid: 'guest-user',
+  basedOnPassionIds: [guestPassion.id],
+  characterPrompt: '旅先の朝市の空気感を大切にする、のんびりした案内役。',
+  hatchLevel: 12,
+  createdAt: now(),
+  currentOwnerUid: 'guest-user',
+  name: 'タビトル',
+  color: '#d9c8ff',
+  motif: 'egg',
+}
+
+/** 他ユーザーが渡す用のサンプル卵（デモユーザーは初期状態では未所持） */
+const demoShareEgg: Egg = {
+  id: 'egg-demo-share',
+  sourceUserUid: 'guest-user',
   basedOnPassionIds: [samplePassion.id],
   characterPrompt:
     '深夜ラジオの空気感を大事にする。静かな聞き役で、相手の偏愛の細部を拾って質問する。',
   hatchLevel: 48,
   createdAt: now(),
-  currentOwnerUid: CURRENT_USER_ID,
+  currentOwnerUid: 'guest-user',
   name: 'ヨルノコ',
   color: '#FF9B37',
   motif: 'fox',
@@ -58,12 +81,12 @@ const sampleEgg: Egg = {
 
 const sampleEggBlue: Egg = {
   id: 'egg-sample-cafe',
-  sourceUserUid: CURRENT_USER_ID,
+  sourceUserUid: 'guest-user',
   basedOnPassionIds: ['passion-sample-cafe'],
   characterPrompt: 'カフェの香りと静けさを大切にする、のんびりした聞き手。',
   hatchLevel: 62,
   createdAt: now(),
-  currentOwnerUid: CURRENT_USER_ID,
+  currentOwnerUid: 'guest-user',
   name: 'ソラネ',
   color: '#4EDBFB',
   motif: 'cat',
@@ -71,39 +94,15 @@ const sampleEggBlue: Egg = {
 
 const sampleEggPurple: Egg = {
   id: 'egg-sample-stationery',
-  sourceUserUid: CURRENT_USER_ID,
+  sourceUserUid: 'guest-user',
   basedOnPassionIds: ['passion-sample-stationery'],
   characterPrompt: '文房具の手触りや色の組み合わせに詳しい、丁寧な相棒。',
   hatchLevel: 55,
   createdAt: now(),
-  currentOwnerUid: CURRENT_USER_ID,
+  currentOwnerUid: 'guest-user',
   name: 'ムラサキ',
   color: '#d9c8ff',
   motif: 'bird',
-}
-
-const guestGiftEgg: Egg = {
-  id: 'egg-guest-gift',
-  sourceUserUid: 'guest-user',
-  basedOnPassionIds: [guestPassion.id],
-  characterPrompt: '旅先の朝市の空気感を大切にする、のんびりした案内役。',
-  hatchLevel: 51,
-  createdAt: now(),
-  currentOwnerUid: 'guest-user',
-  name: 'タビトル',
-  color: '#d9c8ff',
-  motif: 'bird',
-}
-
-const sampleCharacter: Character = {
-  id: 'character-sample-radio',
-  eggId: sampleEgg.id,
-  name: 'ヨルノコ',
-  personality: '静かに聞き役になりながら、好きの理由をそっと掘り下げる。',
-  knowledgeAreas: ['ラジオ番組', '夜更かし文化', '雑談'],
-  growthLevel: 2,
-  affinityScore: 68,
-  unlockedTopics: ['好きになったきっかけ', 'こだわりの専門用語'],
 }
 
 const sampleCharacterBlue: Character = {
@@ -128,33 +127,15 @@ const sampleCharacterPurple: Character = {
   unlockedTopics: ['最初に惹かれた一点', '手触りの好み'],
 }
 
-const guestGiftCharacter: Character = {
-  id: 'character-guest-gift',
-  eggId: guestGiftEgg.id,
-  name: 'タビトル',
-  personality: '旅先の朝の匂いを聞くと、土地の話を少しずつ引き出してくれる。',
-  knowledgeAreas: ['旅', '朝', '市場'],
-  growthLevel: 1,
-  affinityScore: 54,
-  unlockedTopics: ['好きな朝の過ごし方', '旅の思い出'],
-}
-
-const sampleExchange = {
-  id: 'exchange-sample',
-  fromUid: 'guest-user',
-  toUid: CURRENT_USER_ID,
-  eggId: sampleEgg.id,
-  createdAt: now(),
-  meetingContext: 'ハッカソン会場で交換',
-}
-
 const sampleData: AppData = {
+  // デモ: ログイン時は卵未所持 → 育成=空画面。交換/読み取る → タビトル受取 → 育成へ。
   users: [currentUser],
   passions: [samplePassion, guestPassion],
-  eggs: [sampleEgg, sampleEggBlue, sampleEggPurple, guestGiftEgg],
-  characters: [sampleCharacter, sampleCharacterBlue, sampleCharacterPurple, guestGiftCharacter],
-  exchanges: [sampleExchange],
+  eggs: [demoReceivableEgg, demoShareEgg, sampleEggBlue, sampleEggPurple],
+  characters: [sampleCharacterBlue, sampleCharacterPurple],
+  exchanges: [],
   chats: [],
+  nurturingEggIdsByUid: {},
 }
 
 const readData = (): AppData => {
@@ -181,6 +162,10 @@ const readData = (): AppData => {
       characters: parsed.characters,
       exchanges: Array.isArray(parsed.exchanges) ? parsed.exchanges : [],
       chats: Array.isArray(parsed.chats) ? parsed.chats : [],
+      nurturingEggIdsByUid:
+        parsed.nurturingEggIdsByUid && typeof parsed.nurturingEggIdsByUid === 'object'
+          ? parsed.nurturingEggIdsByUid
+          : {},
     }
   } catch {
     return sampleData
@@ -196,6 +181,28 @@ export const loadAppData = () => readData()
 
 export const resetDemoData = () => writeData(sampleData)
 
+export const hasChatHistoryForEgg = (eggId: string, userId: string): boolean => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) {
+      return false
+    }
+    const data = JSON.parse(raw) as { chats?: Array<{ characterId?: string; userUid?: string; messages?: unknown[] }> }
+    return (
+      Array.isArray(data.chats) &&
+      data.chats.some(
+        (chat) =>
+          chat.characterId === eggId &&
+          chat.userUid === userId &&
+          Array.isArray(chat.messages) &&
+          chat.messages.length > 0,
+      )
+    )
+  } catch {
+    return false
+  }
+}
+
 export const getCurrentUser = (data: AppData) =>
   data.users.find((user) => user.uid === CURRENT_USER_ID) ?? currentUser
 
@@ -205,9 +212,50 @@ export const getMyPassions = (data: AppData, uid = CURRENT_USER_ID) =>
 export const getMyEggs = (data: AppData, uid = CURRENT_USER_ID) =>
   data.eggs.filter((egg) => egg.currentOwnerUid === uid)
 
+export const getNurturingEggIds = (data: AppData, uid: string): string[] =>
+  data.nurturingEggIdsByUid?.[uid] ?? []
+
+export const isEggNurturing = (data: AppData, uid: string, eggId: string): boolean =>
+  getNurturingEggIds(data, uid).includes(eggId)
+
+export const getMyNurturingEggs = (data: AppData, uid = CURRENT_USER_ID) => {
+  const nurturingIds = new Set(getNurturingEggIds(data, uid))
+  return getMyEggs(data, uid).filter((egg) => nurturingIds.has(egg.id))
+}
+
+export const getMyUnassignedEggs = (data: AppData, uid = CURRENT_USER_ID) => {
+  const nurturingIds = new Set(getNurturingEggIds(data, uid))
+  return getMyEggs(data, uid).filter((egg) => !nurturingIds.has(egg.id))
+}
+
+export const activateEggForNurturing = (data: AppData, uid: string, eggId: string): AppData => {
+  const owned = data.eggs.some((egg) => egg.id === eggId && egg.currentOwnerUid === uid)
+  if (!owned || isEggNurturing(data, uid, eggId)) {
+    return data
+  }
+
+  const current = data.nurturingEggIdsByUid ?? {}
+  return writeData({
+    ...data,
+    nurturingEggIdsByUid: {
+      ...current,
+      [uid]: [...(current[uid] ?? []), eggId],
+    },
+  })
+}
+
 export const getMyCharacters = (data: AppData, uid = CURRENT_USER_ID) => {
   const myEggIds = new Set(getMyEggs(data, uid).map((egg) => egg.id))
-  return data.characters.filter((character) => myEggIds.has(character.eggId))
+  return data.characters.filter(
+    (character) => myEggIds.has(character.eggId) && character.id === character.eggId,
+  )
+}
+
+export const getMyNurturingCharacters = (data: AppData, uid = CURRENT_USER_ID) => {
+  const nurturingEggIds = new Set(getNurturingEggIds(data, uid))
+  return data.characters.filter(
+    (character) => nurturingEggIds.has(character.eggId) && character.id === character.eggId,
+  )
 }
 
 export const createLocalEggFromPassion = (passion: Passion): Egg => {
@@ -264,17 +312,136 @@ export const createPassion = (input: PassionInput, uid = CURRENT_USER_ID) => {
   })
 }
 
-export const appendEggToLocalData = (egg: Egg) => {
-  const data = readData()
-  const exists = data.eggs.some((item) => item.id === egg.id)
-  if (exists) {
+export const mergeEggsIntoAppData = (data: AppData, incoming: Egg[]): AppData => {
+  if (incoming.length === 0) {
     return data
   }
 
+  const byId = new Map(data.eggs.map((egg) => [egg.id, egg]))
+  for (const egg of incoming) {
+    byId.set(egg.id, egg)
+  }
+
+  return {
+    ...data,
+    eggs: Array.from(byId.values()),
+  }
+}
+
+export const receiveEggForNurturing = (data: AppData, uid: string, egg: Egg): AppData =>
+  activateEggForNurturing(mergeEggsIntoAppData(data, [egg]), uid, egg.id)
+
+export const appendEggToLocalData = (egg: Egg) => {
+  const data = readData()
+  return writeData(mergeEggsIntoAppData(data, [egg]))
+}
+
+export const syncEggsToLocalData = (eggs: Egg[]) => {
+  const data = readData()
+  return writeData(mergeEggsIntoAppData(data, eggs))
+}
+
+export const mergeCharactersIntoAppData = (data: AppData, incoming: Character[]): AppData => {
+  if (incoming.length === 0) {
+    return data
+  }
+
+  const byId = new Map(data.characters.map((character) => [character.id, character]))
+  for (const character of incoming) {
+    byId.set(character.id, character)
+  }
+
+  return {
+    ...data,
+    characters: Array.from(byId.values()),
+  }
+}
+
+export const syncCharactersToLocalData = (characters: Character[]) => {
+  const data = readData()
+  return writeData(mergeCharactersIntoAppData(data, characters))
+}
+
+export const syncFirestoreGrowthToLocalData = (eggs: Egg[], characters: Character[]) => {
+  let next = readData()
+  if (eggs.length > 0) {
+    next = mergeEggsIntoAppData(next, eggs)
+  }
+  if (characters.length > 0) {
+    next = mergeCharactersIntoAppData(next, characters)
+  }
+  if (eggs.length === 0 && characters.length === 0) {
+    return next
+  }
+  return writeData(next)
+}
+
+export const applyHatchProgressToAppData = (
+  data: AppData,
+  eggId: string,
+  hatchLevel: number,
+  character?: Character,
+): AppData => {
+  const eggs = data.eggs.map((item) => (item.id === eggId ? { ...item, hatchLevel } : item))
+  const characters = character
+    ? [character, ...data.characters.filter((item) => item.id !== character.id)]
+    : data.characters
+
   return writeData({
     ...data,
-    eggs: [egg, ...data.eggs],
+    eggs,
+    characters,
   })
+}
+
+export type HatchProgressResult = {
+  data: AppData
+  hatched: boolean
+  hatchLevel: number
+}
+
+const hatchCharacterFromEgg = (egg: Egg, passion?: Passion): Character => ({
+  id: egg.id,
+  eggId: egg.id,
+  name: egg.name,
+  personality: egg.characterPrompt,
+  knowledgeAreas: passion && passion.tags.length > 0 ? passion.tags : ['偏愛'],
+  growthLevel: 1,
+  affinityScore: 20,
+  unlockedTopics: passion
+    ? [passion.title, '好きになったきっかけ']
+    : ['好きになったきっかけ', '一番語りたい細部'],
+})
+
+/** デモ/ローカル: 会話 1 回ごとに孵化を進め、100% で characters に永続化する */
+export const advanceLocalHatchProgress = (eggId: string, ownerUid: string): HatchProgressResult | null => {
+  const data = readData()
+  const eggIndex = data.eggs.findIndex((item) => item.id === eggId && item.currentOwnerUid === ownerUid)
+  if (eggIndex < 0) {
+    return null
+  }
+
+  const egg = data.eggs[eggIndex]
+  const alreadyHatched = data.characters.some((character) => character.id === eggId && character.eggId === eggId)
+  if (alreadyHatched) {
+    return { data, hatched: true, hatchLevel: egg.hatchLevel }
+  }
+
+  const hatchLevel = Math.min(HATCH_COMPLETE_LEVEL, egg.hatchLevel + HATCH_PROGRESS_PER_MESSAGE)
+  const eggs = data.eggs.map((item, index) => (index === eggIndex ? { ...item, hatchLevel } : item))
+  const hatched = hatchLevel >= HATCH_COMPLETE_LEVEL
+
+  const characters = hatched
+    ? [hatchCharacterFromEgg(eggs[eggIndex], data.passions.find((p) => egg.basedOnPassionIds.includes(p.id))), ...data.characters]
+    : data.characters
+
+  const nextData = writeData({
+    ...data,
+    eggs,
+    characters,
+  })
+
+  return { data: nextData, hatched, hatchLevel }
 }
 
 export const receiveEggLocally = (eggId: string, toUid: string, meetingContext: string) => {
@@ -286,7 +453,7 @@ export const receiveEggLocally = (eggId: string, toUid: string, meetingContext: 
   }
 
   if (egg.currentOwnerUid === toUid) {
-    return data
+    return activateEggForNurturing(data, toUid, eggId)
   }
 
   const exchange = {
@@ -302,9 +469,13 @@ export const receiveEggLocally = (eggId: string, toUid: string, meetingContext: 
     item.id === eggId ? { ...item, currentOwnerUid: toUid } : item,
   )
 
-  return writeData({
-    ...data,
-    eggs,
-    exchanges: [exchange, ...data.exchanges],
-  })
+  return activateEggForNurturing(
+    writeData({
+      ...data,
+      eggs,
+      exchanges: [exchange, ...data.exchanges],
+    }),
+    toUid,
+    eggId,
+  )
 }

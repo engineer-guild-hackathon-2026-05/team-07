@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { charactersBg } from '../../lib/characterAssets'
 import loginHeroGif from '../../assets/login-hero.gif'
 
-const VIDEO_SOURCES = ['/login-hero.mp4', '/login-hero.webm'] as const
+const VIDEO_SOURCES = ['/mp_.mp4'] as const
 
 export function LoginCinematicBackground() {
   const [videoReady, setVideoReady] = useState(false)
