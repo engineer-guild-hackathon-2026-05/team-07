@@ -671,7 +671,7 @@ export function CharacterChat({
       ) : null}
 
       {/* Spacer so content isn't hidden behind the floating ChatInput */}
-      <div className="h-[calc(80px+env(safe-area-inset-bottom,0px))]" />
+      <div className="h-[calc(var(--mobile-nav-height)+env(safe-area-inset-bottom,0px)+120px)]" />
 
       {/* Chat input (absolute-positioned above bottom nav) */}
       <ChatInput onSend={sendMessage} disabled={isLoading} />
