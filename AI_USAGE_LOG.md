@@ -2,7 +2,7 @@
 
 審査項目「AI 活用度」の根拠資料。Day1〜Day3 を通して、AI ツールをどう使ったかを記録する。  
 **メンバー別ログ（`docs/ai_usage_logs/`）を時系列順に統合したもの。**  
-（SHIMMEN / WAKAMIYA / YOSHIMURA=@aoi0814）
+（SHIMMEN / WAKAMIYA / YOSHIMURA=@aoi0814 / GODA）
 
 ## 記入ルール
 
@@ -873,3 +873,196 @@
 - **出力サマリ**：`CharacterDetailPage` のキャラなし・卵なしケースを統合し `EmptyState` を廃止。`RoomBackdrop` SVG・メッセージ・「偏愛を登録する」リンクを配置。`max-h-[360px]` で SVG 拡大を防止、`h-36` top スペーサーで位置を補正
 - **評価**：採用
 - **採用の理由**：SVG の `preserveAspectRatio="slice"` がコンテナ高さに依存する挙動を正確に診断し `max-h` で解決。2 回の指摘で収束した
+
+---
+
+### #041 incremental-implementation スキルの軽量化
+
+- **時刻**：02:00
+- **担当者**：GODA
+- **ツール**：Claude Code（claude-opus-4-7）
+- **目的**：ハッカソン中に開発の長期化を招いていた既存スキルを、正確性を保ったまま速度優先の軽量版に再設計する
+- **プロンプト**：
+  ```
+  現状incremental-implementationのskillを使用すると開発が長期化してしまう。本来の正確性は損いたくないのですが、開発に長く時間がかかってしまうので不要な部分を削ぎ落としたいです
+  ```
+  ```
+  次にもう一つのskillもお願いします
+  ```
+- **出力サマリ**：
+  - `.claude/skills/incremental-implementation/SKILL.md` の時間コストが高い手順（過剰な事前検証・冗長な確認ステップ）を特定し、Day1-2 速度優先の軽量版に書き直し
+  - 続けて `socratic-requirements-builder` スキルも同方針で軽量化（要件サマリ作成までを最短化）
+- **評価**：採用
+- **採用の理由**：AI に作業を投げる前にワークフロー自体をチームの速度に合わせて再設計したことで、以降のセッション（#043〜#049）の実装スピードが目に見えて改善した
+
+---
+
+### #042 design-swap スキルの新規作成
+
+- **時刻**：02:29
+- **担当者**：GODA
+- **ツール**：Claude Code（claude-opus-4-7）
+- **目的**：Claude で生成したフロントデザインを既存ページの「見た目だけ」に反映する専用ワークフローをスキル化する（ロジック・state・hooks・データフローは絶対に触らない）
+- **プロンプト**：
+  ```
+  新しいスキルを作成してほしい。claude designで作成したフロントデザインに既存のコードを置き換えたい。なんかいい感じにスキルを考えてください。デザインは全く変更してバックエンドや画面上の動きは変えたくない
+  ```
+- **出力サマリ**：`.claude/skills/design-swap/SKILL.md` を新規作成。「JSX/Tailwind のみ差し替え、state/hooks/データフロー/ルーティングは保持」を制約として明記し、1 ページ単位の置換に最適化したハッカソン軽量版として整備
+- **評価**：採用
+- **採用の理由**：プロンプトを毎回組み立てる代わりにスキルとして固定化したことで、#043・#044 で同品質のデザイン置換を再現でき、ロジック破壊事故を防げた
+
+---
+
+### #043 mock を元にした Login / Home の UI 刷新と Tailwind 移行
+
+- **時刻**：02:48
+- **担当者**：GODA
+- **ツール**：Claude Code（claude-opus-4-7）+ design-swap スキル
+- **目的**：`mock/` 配下のデザインに既存 Login / Home の見た目を揃え、ついでに残っていた生 CSS を Tailwind に統一する
+- **プロンプト**：
+  ```
+  team-07の配下にmockフォルダを作成しました。この中にログイン画面とhome画面があるのでスキルを使って現在のコードを書き直してみてください
+  ```
+  ```
+  もしここら辺の変更で生のcssの部分を全部tailwindで作ってください。
+  ```
+  ```
+  このブランチで行った変更差分を新しくブランチ作って移してしまいたい
+  ```
+- **出力サマリ**：
+  - `Login.tsx` / Home 関連 JSX をモック準拠に置換（ロジック・状態管理は保持）
+  - login / shared / exchange / chat の style block を `@apply` に移行（`082d936` / `04acb6c` / `4149bbe`）
+  - 差分を `refactor/_no-issue_redesign_login_home` 新規ブランチへ移動し独立 PR 化（`dbb8881`）
+- **評価**：採用
+- **採用の理由**：design-swap スキルが期待通り「見た目だけ」を差し替え、ロジック退行ゼロでビルドが通った。Tailwind 移行とブランチ分離も同セッションで処理できコンテキスト切替コストを削減
+
+---
+
+### #044 偏愛登録フォーム・AIチャット画面のデザイン刷新
+
+- **時刻**：03:25
+- **担当者**：GODA
+- **ツール**：Claude Code（claude-opus-4-7）+ design-swap スキル
+- **目的**：偏愛登録フォーム（`AddPassionForm`）と AI チャット画面（開始込み）をモック準拠デザインに統一する
+- **プロンプト**：
+  ```
+  mock(3)フォルダを元に、偏愛登録フォーム。チャット画面（開始込み)の画面が入っているので、そこをスキルを使って今のフロントデザインを変えて欲しい・
+  ```
+  ```
+  このセッションで編集したファイルのみcommit pushして
+  ```
+- **出力サマリ**：`AddPassionForm` / `PassionAiChat` の JSX をモック準拠に刷新し、`refactor: 偏愛登録フォームとAIチャット画面のUIをモック寄せデザインに刷新` としてコミット（`49b73f7`）。並行作業中の他メンバーの変更を巻き込まないよう「このセッションで編集したファイルのみ」コミット
+- **評価**：採用
+- **採用の理由**：`useAddPassion` などの hook 呼び出しを破壊せず見た目だけ置換できた。並行開発下で他メンバーの作業を巻き込まないコミット範囲指定が機能した
+
+---
+
+### #045 共通UIコンポーネント整理（生CSS撲滅）
+
+- **時刻**：03:50
+- **担当者**：GODA
+- **ツール**：Claude Code（claude-opus-4-7）
+- **目的**：プロジェクト全体に散らばっていた生 CSS を Tailwind に統一し、共通 UI コンポーネントを再整理する
+- **プロンプト**：
+  ```
+  やって欲しいこととして生のcssを撲滅してください
+  ```
+  ```
+  新しいブランチを作成してね
+  ```
+  ```
+  進めてください
+  ```
+- **出力サマリ**：残存していた `.css` ブロックを Tailwind クラスに機械的に置換し、共通コンポーネントとレイアウトを統合。`refactor: 共通UIコンポーネントとレイアウト調整を反映` としてコミット（`e1ef07c`）
+- **評価**：採用
+- **採用の理由**：「撲滅」という抽象指示でも、AI が対象範囲（全プロジェクトの生 CSS）を自律的に列挙し Tailwind へ置換できた。手動で全ファイルを grep する作業を省略できた
+
+---
+
+### #046 ブランチ統合とログイン画面スクロール修正
+
+- **時刻**：03:58
+- **担当者**：GODA
+- **ツール**：Claude Code（claude-opus-4-7）+ Git
+- **目的**：`refactor/_no-issue_redesign_login_home` と `dev` のコンフリクトを解消し、ログイン画面のスクロール不可・モック乖離を修正する
+- **プロンプト**：
+  ```
+  refactor/_no-issue_redesign_login_homeとdevにconfilictが発生しているので、解消したい
+  ```
+  ```
+  なんかもうそのまま2つのブランチの内容を一つのブランチとして合体させていいよ
+  ```
+  ```
+  これさ、多分、今スクロールができない ログイン画面がmock通りになっていないと言った問題があります修正して
+  ```
+  ```
+  これでpushしてください
+  ```
+- **出力サマリ**：
+  - 2 ブランチを `imprv/ui-register` に統合（merge commits `f294aeb` / `2d81a1b`）
+  - ログイン画面のスクロールロックを撤去し余剰セクションを削除（`ca71dd2`）
+  - PR #73 として dev にマージ（`8123717`）
+- **評価**：採用
+- **採用の理由**：コンフリクト解消・マージ戦略の選択・実機 UI 不具合の修正までを 1 セッションで完了できた。3 ファイルの競合を手動で解くより速く、かつ意図（モック準拠＋スクロール可能）も反映できた
+
+---
+
+### #047 PassionAiChat 白画面のデバッグ
+
+- **時刻**：04:38
+- **担当者**：GODA
+- **ツール**：Claude Code（claude-opus-4-7）
+- **目的**：直前のリファクタ後に `/passions/:passionId/aichat` が真っ白になる現象の根因を特定して修正する
+- **プロンプト**：
+  ```
+  今http://localhost:5174/passions/CcsSOnGpYQ9yw4cZhNdI/aichat画面が真っ白なので原因を調べて欲しいです
+  ```
+  ```
+  この内容を直接pushしてください
+  ```
+- **出力サマリ**：`PassionAiChat` 内に削除漏れの `useNavigate` 未定義参照が残っていたことを特定し削除。`fix: PassionAiChat の未定義 useNavigate 参照を削除し白画面を解消` としてコミット（`16b1087`）
+- **評価**：採用
+- **採用の理由**：症状（白画面）→ ランタイムエラー想定 → 該当ファイル探索 → 未定義参照特定、というデバッグ手順を URL 1 本で AI に完結させられた
+
+---
+
+### #048 卵作成画面に LINE 共有ボタンを追加
+
+- **時刻**：08:21
+- **担当者**：GODA
+- **ツール**：Claude Code（claude-opus-4-7）
+- **目的**：交換 UX のコアである egg-create 画面に LINE 共有導線を追加し、リンク交換のハードルを下げる
+- **プロンプト**：
+  ```
+  新しくブランチを作って以下のことをやってほしいhttps://egh-team7.web.app/passions/HaGk76uwwyIvtNO6ms3b/egg-create ここの画面にLINEでリンク共有するボタンを置いてほしいよろしくお願いします
+  ```
+  ```
+  お願いします
+  ```
+- **出力サマリ**：egg-create 画面に LINE 共有ボタンを追加。`createUrlExchange` callable で発行した共有 URL を LINE share intent に渡す形で実装し、`feat: 卵作成画面に LINE 共有ボタンを追加` としてコミット（`19ebfcc`）
+- **評価**：採用
+- **採用の理由**：本番 URL を 1 本貼っただけで、UI 配置・共有 URL 生成・LINE share intent 連携までを一気通貫で実装できた
+
+---
+
+### #049 Firebase Functions の region 不一致による CORS 解消
+
+- **時刻**：08:33
+- **担当者**：GODA
+- **ツール**：Claude Code（claude-opus-4-7）+ Firebase CLI
+- **目的**：LINE 共有ボタンから `createUrlExchange` 呼び出しが CORS で失敗する事故を本番で修復する
+- **プロンプト**：
+  ```
+  共有URLの発行に失敗しました。時間をおいて再試行してください。
+  ```
+  ```
+  firebase_auth.js?v=538bcdaf:7920 Cross-Origin-Opener-Policy policy would block the window.closed call.
+  ...
+  Access to fetch at 'https://asia-northeast1-egh-team7.cloudfunctions.net/createUrlExchange' from origin 'http://localhost:5176' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+  ```
+  ```
+  今の変更内容をpushしてください
+  ```
+- **出力サマリ**：クライアントは `asia-northeast1` を叩く一方、Functions は `us-central1` にデプロイされていたため CORS で弾かれていたことを特定。`createUrlExchange` / `completeExchange` に `region: "asia-northeast1"` を指定して再デプロイし、`fix: createUrlExchange / completeExchange を asia-northeast1 にデプロイするよう region 指定` としてコミット（`605b908`）
+- **評価**：採用
+- **採用の理由**：「URL 発行に失敗」という表層エラーと CORS ログを貼っただけで、リージョン不一致という根因に到達できた。本番事故をその場で修復でき、デモ前のクリティカルパスを守れた
