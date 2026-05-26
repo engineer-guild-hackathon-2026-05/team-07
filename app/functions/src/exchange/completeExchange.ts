@@ -123,6 +123,7 @@ export async function completeExchangeHandler(
 }
 
 export const completeExchange = onCall<CompleteExchangeInput>(
+  {region: "asia-northeast1"},
   async (request) => {
     const db = getFirestore();
     return completeExchangeHandler(request.auth?.uid, request.data, {
