@@ -13,6 +13,46 @@ export type ExchangeShareInput = {
 export const buildReceiveUrl = (eggId: string, origin = typeof window !== 'undefined' ? window.location.origin : '') =>
   `${origin}/exchange/receive?egg=${encodeURIComponent(eggId)}`
 
+export type ParsedExchangeScan =
+  | { kind: 'exchange-id'; exchangeId: string }
+  | { kind: 'legacy-egg'; eggId: string }
+
+/** QR / 手入力から交換 URL または eggId を抽出する */
+export const parseExchangeScanResult = (raw: string): ParsedExchangeScan | null => {
+  const trimmed = raw.trim()
+  if (!trimmed) {
+    return null
+  }
+
+  try {
+    const url = trimmed.startsWith('http')
+      ? new URL(trimmed)
+      : new URL(trimmed, typeof window !== 'undefined' ? window.location.origin : 'http://localhost')
+
+    const receiveMatch = url.pathname.match(/\/exchange\/receive\/([^/]+)/)
+    if (receiveMatch?.[1]) {
+      return { kind: 'exchange-id', exchangeId: decodeURIComponent(receiveMatch[1]) }
+    }
+
+    const eggParam = url.searchParams.get('egg')
+    if (eggParam && url.pathname.includes('/exchange/receive')) {
+      return { kind: 'legacy-egg', eggId: eggParam }
+    }
+  } catch {
+    // URL でなければ下の bare id 判定へ
+  }
+
+  if (/^[0-9a-f-]{36}$/i.test(trimmed)) {
+    return { kind: 'exchange-id', exchangeId: trimmed }
+  }
+
+  if (trimmed.startsWith('egg-')) {
+    return { kind: 'legacy-egg', eggId: trimmed }
+  }
+
+  return null
+}
+
 export const buildShareText = ({
   egg,
   passion,
