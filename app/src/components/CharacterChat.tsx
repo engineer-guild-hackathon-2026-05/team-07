@@ -259,6 +259,19 @@ export function CharacterChat({
     }
   }, [lastCharReply])
 
+  useEffect(() => {
+    if (quizSelected === null) {
+      return
+    }
+    const timer = window.setTimeout(() => {
+      setShowQuiz(false)
+      setQuiz(null)
+      setQuizSelected(null)
+      setQuizResult('')
+    }, 5000)
+    return () => window.clearTimeout(timer)
+  }, [quizSelected])
+
   const sendMessage = useCallback(
     async (content: string) => {
       const trimmed = content.trim()
@@ -460,7 +473,7 @@ export function CharacterChat({
   }
 
   return (
-    <div className="relative flex w-full min-h-[100svh] flex-col overflow-hidden font-sans bg-[#FBF6EC]">
+    <div className="relative flex h-[100svh] w-full flex-col overflow-hidden font-sans bg-[#FBF6EC]">
       {/* Account chip */}
       <div className="relative z-10 px-3.5 pt-2">
         <button
@@ -590,12 +603,16 @@ export function CharacterChat({
 
         <div className="relative z-10 flex flex-col items-center gap-2">
           {/* Speech bubble — absolutely above the illustration, doesn't shift character position */}
-          {(isLoading || lastCharReply !== null) && (
+          {(isLoading || lastCharReply !== null || showQuiz) && (
             <div
               className={`absolute bottom-full mb-3 left-1/2 -translate-x-1/2 w-max max-w-[240px] z-20 transition-opacity duration-[1200ms] ${replyFading ? 'opacity-0' : 'opacity-100'}`}
             >
               <div className="relative bg-white border border-[#f1e7dc] rounded-2xl px-4 py-3 shadow-md">
-                {isLoading ? (
+                {showQuiz ? (
+                  <p className="text-sm text-[#494949] leading-relaxed">
+                    {quizLoading ? 'クイズを考え中...' : quiz?.text ?? 'クイズを作成中です...'}
+                  </p>
+                ) : isLoading ? (
                   <span className="inline-flex items-center gap-1 text-sm text-[#494949]/60">
                     考え中
                     <span className="flex gap-0.5">
@@ -634,6 +651,24 @@ export function CharacterChat({
           </button>
         </div>
       </div>
+
+      {/* Quiz choices — shown below character instead of modal */}
+      {showQuiz && !quizLoading && quiz ? (
+        <div className="px-4 pb-3 grid gap-2">
+          {quiz.choices.map((choice, index) => (
+            <button
+              key={`${choice}-${index}`}
+              type="button"
+              onClick={() => submitQuizChoice(index)}
+              disabled={quizSelected !== null}
+              className="h-10 rounded-xl border border-[#f1e7dc] bg-[#fff8f0] px-3 text-sm font-bold text-[#494949] disabled:opacity-70"
+            >
+              {choice}
+            </button>
+          ))}
+          {quizResult ? <p className="text-xs font-bold text-[#e77300]">{quizResult}</p> : null}
+        </div>
+      ) : null}
 
       {/* Spacer so content isn't hidden behind the floating ChatInput */}
       <div className="h-[calc(80px+env(safe-area-inset-bottom,0px))]" />
@@ -740,28 +775,6 @@ export function CharacterChat({
         </div>
       </Modal>
 
-      <Modal isOpen={showQuiz} onClose={() => setShowQuiz(false)} title="偏愛クイズ">
-        <div className="mt-2 flex flex-col gap-3">
-          {quizLoading ? <p className="text-sm text-[#494949]">クイズを考え中...</p> : null}
-          {!quizLoading && quiz ? <p className="text-sm leading-relaxed text-[#494949]">{quiz.text}</p> : null}
-          {!quizLoading && quiz ? (
-            <div className="grid gap-2">
-              {quiz.choices.map((choice, index) => (
-                <button
-                  key={`${choice}-${index}`}
-                  type="button"
-                  onClick={() => submitQuizChoice(index)}
-                  disabled={quizSelected !== null}
-                  className="h-10 rounded-xl border border-[#f1e7dc] bg-[#fff8f0] px-3 text-sm font-bold text-[#494949] disabled:opacity-70"
-                >
-                  {choice}
-                </button>
-              ))}
-            </div>
-          ) : null}
-          {quizResult ? <p className="text-xs font-bold text-[#e77300]">{quizResult}</p> : null}
-        </div>
-      </Modal>
     </div>
   )
 }
