@@ -10,7 +10,6 @@ type LoginPageProps = {
   authError: string
   isLoading: boolean
   onAnonymousLogin: () => void
-  onDemoLogin: () => void
   onGoogleLogin: () => void
   user: User | null
 }
@@ -118,7 +117,6 @@ function LoginActions({
   authError,
   isLoading,
   onAnonymousLogin,
-  onDemoLogin,
   onGoogleLogin,
 }: Omit<LoginPageProps, 'user'>) {
   return (
@@ -142,19 +140,6 @@ function LoginActions({
         ゲストではじめる
       </button>
 
-      <button
-        type="button"
-        onClick={onDemoLogin}
-        disabled={isLoading}
-        className="h-10 w-full cursor-pointer rounded-full bg-transparent text-[13px] font-medium text-[#8A8A8A] underline decoration-1 decoration-[#E5E5E5] underline-offset-4 transition-all duration-150 hover:text-[#5C5C5C] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        デモとして見る
-      </button>
-
-      <p className="-mt-1 text-center text-[11px] leading-snug text-[#8A8A8A]">
-        デモはFirebaseに接続せず、ログイン後UIだけ確認します。
-      </p>
-
       {authError ? <p className="mt-1 text-center text-[12px] font-medium text-[#E77300]">{authError}</p> : null}
     </div>
   )
@@ -164,7 +149,6 @@ function LoginPanel({
   authError,
   isLoading,
   onAnonymousLogin,
-  onDemoLogin,
   onGoogleLogin,
   compact = false,
 }: Omit<LoginPageProps, 'user'> & { compact?: boolean }) {
@@ -193,7 +177,6 @@ function LoginPanel({
         authError={authError}
         isLoading={isLoading}
         onAnonymousLogin={onAnonymousLogin}
-        onDemoLogin={onDemoLogin}
         onGoogleLogin={onGoogleLogin}
       />
     </div>
@@ -204,7 +187,6 @@ export function LoginPage({
   authError,
   isLoading,
   onAnonymousLogin,
-  onDemoLogin,
   onGoogleLogin,
   user,
 }: LoginPageProps) {
@@ -216,7 +198,6 @@ export function LoginPage({
     authError,
     isLoading,
     onAnonymousLogin,
-    onDemoLogin,
     onGoogleLogin,
   }
 

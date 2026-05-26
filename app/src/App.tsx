@@ -64,7 +64,6 @@ function AppContent() {
     isLoading: isAuthActionLoading,
     isReady: isAuthReady,
     signInAnonymously,
-    signInWithDemo,
     signInWithGoogle,
     signOut,
     user,
@@ -155,7 +154,6 @@ function AppContent() {
                 isLoading={isAuthActionLoading}
                 onGoogleLogin={signInWithGoogle}
                 onAnonymousLogin={signInAnonymously}
-                onDemoLogin={signInWithDemo}
                 user={user}
               />
             }

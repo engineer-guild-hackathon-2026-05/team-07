@@ -5,7 +5,7 @@ type BottomNavProps = {
 }
 
 const navItems: Array<{ path: string; label: string; icon: string; ariaLabel: string; match?: string }> = [
-  { path: '/passions/new', label: '偏愛', icon: '♥', ariaLabel: '偏愛を登録する' },
+  { path: '/passions/new', label: 'キャラ作成', icon: '♥', ariaLabel: 'キャラを作成する' },
   { path: '/exchange/share', label: '交換', icon: '⇄', ariaLabel: '卵を交換する', match: '/exchange' },
   { path: '/characters', label: '育成', icon: '✦', ariaLabel: 'キャラを育てる', match: '/characters' },
   { path: '/profile', label: 'Profile', icon: '⚙', ariaLabel: 'プロフィール' },
