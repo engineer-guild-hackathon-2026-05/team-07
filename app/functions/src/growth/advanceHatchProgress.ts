@@ -144,11 +144,17 @@ export const advanceHatchProgress = onCall(
         return snap.exists ? (snap.data() as EggDoc) : null;
       },
       getCharacter: async (characterId) => {
-        const snap = await db.collection(COLLECTIONS.CHARACTERS).doc(characterId).get();
+        const snap = await db
+          .collection(COLLECTIONS.CHARACTERS)
+          .doc(characterId)
+          .get();
         return snap.exists ? (snap.data() as CharacterDoc) : null;
       },
       getPassion: async (passionId) => {
-        const snap = await db.collection(COLLECTIONS.PASSIONS).doc(passionId).get();
+        const snap = await db
+          .collection(COLLECTIONS.PASSIONS)
+          .doc(passionId)
+          .get();
         return snap.exists ? (snap.data() as PassionDoc) : null;
       },
       updateEgg: async (eggId, partial) => {
