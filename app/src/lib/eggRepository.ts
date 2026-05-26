@@ -34,7 +34,7 @@ const toIsoString = (value: EggDoc['createdAt']) => {
 }
 
 export const mapEggDocToEgg = (id: string, data: EggDoc): Egg => {
-  const meta = pickEggMeta(data.sourceUserName || id)
+  const meta = pickEggMeta(data.name ?? id)
   return {
     id,
     sourceUserUid: data.sourceUserUid,
@@ -43,9 +43,9 @@ export const mapEggDocToEgg = (id: string, data: EggDoc): Egg => {
     hatchLevel: typeof data.hatchLevel === 'number' ? data.hatchLevel : 0,
     createdAt: toIsoString(data.createdAt),
     currentOwnerUid: data.currentOwnerUid,
-    name: data.sourceUserName || meta.name,
-    color: meta.color,
-    motif: meta.motif,
+    name: data.name ?? meta.name,
+    color: data.color ?? meta.color,
+    motif: data.motif ?? meta.motif,
   }
 }
 

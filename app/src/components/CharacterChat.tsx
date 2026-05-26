@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { doc, getDoc } from 'firebase/firestore'
 import type { AppData, Character, Chat, ChatMessage, Egg, User } from '../types/models'
 import { ChatBubble, ChatInput } from '../features/character-growing'
 import { CharacterIllustration } from '../features/components/CharacterIllustration'
@@ -8,12 +9,15 @@ import { fetchCharacterFromFirestore } from '../lib/characterRepository'
 import { fetchChatMessages, sendMessageToCharacter } from '../lib/chatRepository'
 import { advanceHatchProgress } from '../lib/hatchRepository'
 import {
-  advanceLocalHatchProgress,
   applyHatchProgressToAppData,
-  loadAppData,
+  HATCH_COMPLETE_LEVEL,
+  HATCH_PROGRESS_PER_MESSAGE,
+  mergeEggsIntoAppData,
   STORAGE_KEY,
 } from '../lib/localRepository'
-import { auth } from '../firebase/firebase'
+import { buildCharacterFromEgg } from '../lib/viewHelpers'
+import { auth, db } from '../firebase/firebase'
+import { COLLECTIONS } from '../types/firestore'
 import { Modal } from './ui'
 
 type CharacterChatProps = {
@@ -22,8 +26,23 @@ type CharacterChatProps = {
   isPreHatch?: boolean
   userId: string
   user: User
-  onDataChange?: (data: AppData) => void
+  onDataChange?: Dispatch<SetStateAction<AppData>>
   onLogout: () => Promise<void> | void
+}
+
+type CharacterQuiz = {
+  type: 'quiz' | 'line'
+  text: string
+  choices: string[]
+  correctIndex: number
+}
+
+type PassionQuizContext = {
+  title: string
+  description: string
+  tags: string[]
+  overview: string
+  subjectAttractions: string[]
 }
 
 const createId = (prefix: string) =>
@@ -65,6 +84,110 @@ function buildMockReply(character: Character, userText: string): string {
   return pool[Math.floor(Math.random() * pool.length)]
 }
 
+function buildFallbackQuiz(character: Character, egg: Egg): CharacterQuiz {
+  const topic = character.knowledgeAreas[0] ?? character.unlockedTopics[0] ?? '偏愛'
+  const promptWord = egg.characterPrompt
+    .split(/[、。,\s]/)
+    .map((word) => word.trim())
+    .find((word) => word.length >= 2)
+  const answer = promptWord ?? topic
+  const distractorA = `${topic}以外`
+  const distractorB = 'どれでもない'
+
+  return {
+    type: 'quiz',
+    text: `${character.name}クイズ: あなたの偏愛に一番近いキーワードはどれ？`,
+    choices: [answer, distractorA, distractorB],
+    correctIndex: 0,
+  }
+}
+
+function extractJsonObject(text: string): string {
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i)
+  if (fenced && fenced[1]) {
+    return fenced[1].trim()
+  }
+  const start = text.indexOf('{')
+  const end = text.lastIndexOf('}')
+  if (start >= 0 && end > start) {
+    return text.slice(start, end + 1)
+  }
+  return text.trim()
+}
+
+function parseAiQuiz(text: string): CharacterQuiz | null {
+  try {
+    const parsed = JSON.parse(extractJsonObject(text)) as {
+      mode?: unknown
+      text?: unknown
+      choices?: unknown
+      correctIndex?: unknown
+    }
+    const mode = parsed.mode === 'line' ? 'line' : 'quiz'
+    const body = typeof parsed.text === 'string' ? parsed.text.trim() : ''
+    const choices = Array.isArray(parsed.choices)
+      ? parsed.choices.filter((value): value is string => typeof value === 'string').map((value) => value.trim()).slice(0, 3)
+      : []
+    const correctIndex = typeof parsed.correctIndex === 'number' ? parsed.correctIndex : 0
+
+    if (!body || choices.length !== 3 || correctIndex < 0 || correctIndex > 2) {
+      return null
+    }
+    return { type: mode, text: body, choices, correctIndex }
+  } catch {
+    return null
+  }
+}
+
+async function fetchPassionContextForQuiz(egg: Egg): Promise<PassionQuizContext | null> {
+  const passionId = egg.basedOnPassionIds[0]
+  if (!passionId) {
+    return null
+  }
+  const snap = await getDoc(doc(db, COLLECTIONS.PASSIONS, passionId))
+  if (!snap.exists()) {
+    return null
+  }
+  const data = snap.data() as {
+    title?: unknown
+    description?: unknown
+    tags?: unknown
+    overview?: unknown
+    subjectAttractions?: unknown
+  }
+  return {
+    title: typeof data.title === 'string' ? data.title : '',
+    description: typeof data.description === 'string' ? data.description : '',
+    tags: Array.isArray(data.tags) ? data.tags.filter((value): value is string => typeof value === 'string') : [],
+    overview: typeof data.overview === 'string' ? data.overview : '',
+    subjectAttractions: Array.isArray(data.subjectAttractions)
+      ? data.subjectAttractions.filter((value): value is string => typeof value === 'string')
+      : [],
+  }
+}
+
+function deriveGenreAnchors(passion: PassionQuizContext | null): string[] {
+  if (!passion) {
+    return ['雑学', '文化', '趣味']
+  }
+  const fromTags = passion.tags.slice(0, 4)
+  const fromTitle = passion.title
+    .split(/[・\/\s、。]/)
+    .map((word) => word.trim())
+    .filter((word) => word.length >= 2)
+    .slice(0, 3)
+  const pool = [...fromTags, ...fromTitle]
+  const seen = new Set<string>()
+  const unique = pool.filter((word) => {
+    if (seen.has(word)) {
+      return false
+    }
+    seen.add(word)
+    return true
+  })
+  return unique.length > 0 ? unique : ['雑学', '文化', '趣味']
+}
+
 export function CharacterChat({
   character,
   egg,
@@ -83,6 +206,13 @@ export function CharacterChat({
   const [replyFading, setReplyFading] = useState(false)
   const [breathe, setBreathe] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
+  const [showQuiz, setShowQuiz] = useState(false)
+  const [quizLoading, setQuizLoading] = useState(false)
+  const [quiz, setQuiz] = useState<CharacterQuiz | null>(null)
+  const [quizSelected, setQuizSelected] = useState<number | null>(null)
+  const [quizResult, setQuizResult] = useState('')
+  const [quizHistory, setQuizHistory] = useState<string[]>([])
+  const [localAffinity, setLocalAffinity] = useState(character.affinityScore)
 
   const [chat, setChat] = useState<Chat>(
     () =>
@@ -99,6 +229,10 @@ export function CharacterChat({
     const t = window.setInterval(() => setBreathe((b) => !b), 2400)
     return () => window.clearInterval(t)
   }, [])
+
+  useEffect(() => {
+    setLocalAffinity(character.affinityScore)
+  }, [character.affinityScore])
 
   useEffect(() => {
     const firebaseUser = auth.currentUser
@@ -145,29 +279,59 @@ export function CharacterChat({
       })
 
       const firebaseUser = auth.currentUser
-      if (isPreHatch) {
+      if (isPreHatch && onDataChange) {
+        const nextHatchLevel = Math.min(
+          HATCH_COMPLETE_LEVEL,
+          egg.hatchLevel + HATCH_PROGRESS_PER_MESSAGE,
+        )
+        const willHatch = nextHatchLevel >= HATCH_COMPLETE_LEVEL
+
+        // リモート成否に関わらず UI を即更新（1 回 +50%）
+        onDataChange((prev) => {
+          const base = prev.eggs.some((item) => item.id === egg.id)
+            ? prev
+            : mergeEggsIntoAppData(prev, [egg])
+          const hatchedCharacter = willHatch
+            ? buildCharacterFromEgg({ ...egg, hatchLevel: nextHatchLevel })
+            : undefined
+          return applyHatchProgressToAppData(base, egg.id, nextHatchLevel, hatchedCharacter)
+        })
+
+        // Firestore / Cloud Functions へ非同期同期
         if (firebaseUser) {
-          try {
-            const result = await advanceHatchProgress(egg.id)
-            const hatchedCharacter =
-              result.hatched && result.characterId
-                ? ((await fetchCharacterFromFirestore(result.characterId)) ?? undefined)
-                : undefined
-            const nextData = applyHatchProgressToAppData(
-              loadAppData(),
-              egg.id,
-              result.hatchLevel,
-              hatchedCharacter,
-            )
-            onDataChange?.(nextData)
-          } catch {
-            // 孵化進行失敗時もチャット自体は継続する
-          }
-        } else {
-          const progress = advanceLocalHatchProgress(egg.id, userId)
-          if (progress) {
-            onDataChange?.(progress.data)
-          }
+          void advanceHatchProgress(egg.id)
+            .then(async (result) => {
+              if (result.hatchLevel === nextHatchLevel && !result.hatched) {
+                return
+              }
+
+              let hatchedCharacter: Character | undefined
+              if (result.hatched && result.characterId) {
+                hatchedCharacter =
+                  (await fetchCharacterFromFirestore(result.characterId)) ?? undefined
+              }
+              if (result.hatched && !hatchedCharacter) {
+                hatchedCharacter = buildCharacterFromEgg({
+                  ...egg,
+                  hatchLevel: result.hatchLevel,
+                })
+              }
+
+              onDataChange((prev) => {
+                const base = prev.eggs.some((item) => item.id === egg.id)
+                  ? prev
+                  : mergeEggsIntoAppData(prev, [egg])
+                return applyHatchProgressToAppData(
+                  base,
+                  egg.id,
+                  result.hatchLevel,
+                  hatchedCharacter,
+                )
+              })
+            })
+            .catch(() => {
+              // 楽観更新済みのため UI は維持する
+            })
         }
       }
 
@@ -214,9 +378,86 @@ export function CharacterChat({
     [character, egg.hatchLevel, egg.id, isPreHatch, onDataChange, userId],
   )
 
-  const xpRatio = isPreHatch ? egg.hatchLevel / 100 : (character.affinityScore % 100) / 100
+  const displayAffinity = isPreHatch ? character.affinityScore : localAffinity
+  const xpRatio = isPreHatch ? egg.hatchLevel / 100 : (displayAffinity % 100) / 100
   const userHandle = user.name || 'guest'
   const accountEmail = '@' + user.uid.slice(0, 8)
+
+  const openQuiz = async () => {
+    if (isPreHatch) {
+      return
+    }
+    setShowQuiz(true)
+    setQuizLoading(true)
+    setQuizResult('')
+    setQuizSelected(null)
+
+    try {
+      const passion = await fetchPassionContextForQuiz(egg)
+      const genreAnchors = deriveGenreAnchors(passion)
+      const randomAnchor = genreAnchors[Math.floor(Math.random() * genreAnchors.length)]
+      const aiText = await generateAiReply({
+        promptType: 'character_growing',
+        message: [
+          'キャラの特性と偏愛データに沿った3択クイズを1問作ってください。',
+          '同じ問題の繰り返しを避け、近いジャンルで毎回切り口を変えてください。',
+          `今回は「${randomAnchor}」寄りの切り口にしてください。`,
+          '返答はJSONのみ。',
+          'modeは "quiz" または "line"。',
+          'lineでも必ず choices 3件と correctIndex を返す。',
+        ].join('\n'),
+        context: [
+          `characterName=${character.name}`,
+          `personality=${character.personality}`,
+          `knowledgeAreas=${character.knowledgeAreas.join(',')}`,
+          `unlockedTopics=${character.unlockedTopics.join(',')}`,
+          `characterPrompt=${egg.characterPrompt}`,
+          `passionTitle=${passion?.title ?? ''}`,
+          `passionDescription=${passion?.description ?? ''}`,
+          `passionTags=${(passion?.tags ?? []).join(',')}`,
+          `passionOverview=${passion?.overview ?? ''}`,
+          `passionAttractions=${(passion?.subjectAttractions ?? []).join(',')}`,
+          `genreAnchors=${genreAnchors.join(',')}`,
+          `recentQuizTexts=${quizHistory.join(' || ')}`,
+          'format={"mode":"quiz|line","text":"問題文 or セリフ","choices":["選択肢1","選択肢2","選択肢3"],"correctIndex":0}',
+        ].join('; '),
+      })
+      const parsed = parseAiQuiz(aiText)
+      const nextQuiz = parsed ?? buildFallbackQuiz(character, egg)
+      setQuiz(nextQuiz)
+      setQuizHistory((prev) => [nextQuiz.text, ...prev].slice(0, 8))
+    } catch {
+      const fallbackQuiz = buildFallbackQuiz(character, egg)
+      setQuiz(fallbackQuiz)
+      setQuizHistory((prev) => [fallbackQuiz.text, ...prev].slice(0, 8))
+    } finally {
+      setQuizLoading(false)
+    }
+  }
+
+  const submitQuizChoice = (choiceIndex: number) => {
+    if (!quiz || quizSelected !== null) {
+      return
+    }
+    setQuizSelected(choiceIndex)
+
+    const isCorrect = choiceIndex === quiz.correctIndex
+    const gain = isCorrect ? 10 : 2
+    const nextAffinity = Math.min(100, localAffinity + gain)
+    setLocalAffinity(nextAffinity)
+    setQuizResult(isCorrect ? `正解！ 親密度 +${gain}` : `惜しい！ 親密度 +${gain}`)
+
+    if (!onDataChange || isPreHatch) {
+      return
+    }
+
+    onDataChange((prev) => ({
+      ...prev,
+      characters: prev.characters.map((item) =>
+        item.id === character.id ? { ...item, affinityScore: nextAffinity } : item,
+      ),
+    }))
+  }
 
   return (
     <div className="relative flex w-full min-h-[100svh] flex-col overflow-hidden font-sans bg-[#FBF6EC]">
@@ -288,7 +529,7 @@ export function CharacterChat({
               孵化前
             </span>
           ) : (
-            <AffinityBadge value={character.affinityScore} />
+            <AffinityBadge value={displayAffinity} />
           )}
         </div>
         <button
@@ -372,13 +613,16 @@ export function CharacterChat({
           )}
 
           {/* Character illustration with breathing animation */}
-          <div
+          <button
+            type="button"
+            onClick={() => void openQuiz()}
             className={`transition-transform duration-[2400ms] ease-in-out ${
               breathe ? 'translate-y-0 scale-[1.015]' : 'translate-y-[2px] scale-100'
-            }`}
+            } ${isPreHatch ? 'cursor-default' : 'cursor-pointer'}`}
+            aria-label={isPreHatch ? '卵の表示' : 'キャラをタップしてクイズを開く'}
           >
             <CharacterIllustration egg={egg} size="large" showAsEgg={isPreHatch} />
-          </div>
+          </button>
 
           {/* Status button right below the character */}
           <button
@@ -390,21 +634,6 @@ export function CharacterChat({
           </button>
         </div>
       </div>
-
-      {/* Action pills — 孵化前はまだ使えない */}
-      {!isPreHatch ? (
-        <div className="px-4 pt-1.5 pb-3 grid grid-cols-4 gap-2.5">
-          <ActionPill tint="honey" label="ごはん" icon={<BowlIcon />} />
-          <ActionPill tint="coral" label="なでる" icon={<HandIcon />} />
-          <ActionPill tint="sky" label="あそぶ" icon={<GameIcon />} />
-          <ActionPill
-            tint="sage"
-            label="交換"
-            icon={<SwapIcon />}
-            onClick={() => navigate('/exchange/share')}
-          />
-        </div>
-      ) : null}
 
       {/* Spacer so content isn't hidden behind the floating ChatInput */}
       <div className="h-[calc(80px+env(safe-area-inset-bottom,0px))]" />
@@ -460,10 +689,10 @@ export function CharacterChat({
               <div className="flex-1 h-2 bg-[#fce7f3] rounded-full overflow-hidden">
                 <div
                   className="h-full bg-pink-300 rounded-full transition-[width] duration-300"
-                  style={{ width: `${Math.min(100, character.affinityScore)}%` }}
+                  style={{ width: `${Math.min(100, displayAffinity)}%` }}
                 />
               </div>
-              <span className="text-sm font-bold text-pink-400">{character.affinityScore}</span>
+              <span className="text-sm font-bold text-pink-400">{displayAffinity}</span>
             </div>
           </StatusRow>
           <StatusRow label="知識領域">
@@ -510,47 +739,34 @@ export function CharacterChat({
           <div ref={historyBottomRef} />
         </div>
       </Modal>
+
+      <Modal isOpen={showQuiz} onClose={() => setShowQuiz(false)} title="偏愛クイズ">
+        <div className="mt-2 flex flex-col gap-3">
+          {quizLoading ? <p className="text-sm text-[#494949]">クイズを考え中...</p> : null}
+          {!quizLoading && quiz ? <p className="text-sm leading-relaxed text-[#494949]">{quiz.text}</p> : null}
+          {!quizLoading && quiz ? (
+            <div className="grid gap-2">
+              {quiz.choices.map((choice, index) => (
+                <button
+                  key={`${choice}-${index}`}
+                  type="button"
+                  onClick={() => submitQuizChoice(index)}
+                  disabled={quizSelected !== null}
+                  className="h-10 rounded-xl border border-[#f1e7dc] bg-[#fff8f0] px-3 text-sm font-bold text-[#494949] disabled:opacity-70"
+                >
+                  {choice}
+                </button>
+              ))}
+            </div>
+          ) : null}
+          {quizResult ? <p className="text-xs font-bold text-[#e77300]">{quizResult}</p> : null}
+        </div>
+      </Modal>
     </div>
   )
 }
 
 // ── Sub-components ──────────────────────────────────────────────────────────
-
-type ActionTint = 'honey' | 'coral' | 'sky' | 'sage'
-
-const TINT_CLASSES: Record<ActionTint, string> = {
-  honey: 'bg-[#FBF1DC] text-[#D9962E]',
-  coral: 'bg-[#FFE9D2] text-[#E77300]',
-  sky: 'bg-[#E0F5FB] text-[#17BFE4]',
-  sage: 'bg-[#E6EFE5] text-[#5E8462]',
-}
-
-function ActionPill({
-  tint,
-  label,
-  icon,
-  onClick,
-}: {
-  tint: ActionTint
-  label: string
-  icon: React.ReactNode
-  onClick?: () => void
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex cursor-pointer flex-col items-center gap-1 border-0 bg-transparent p-0 transition-transform duration-150 active:scale-[0.97]"
-    >
-      <span
-        className={`flex h-[52px] w-[52px] items-center justify-center rounded-[18px] shadow-[0_2px_6px_rgba(80,50,30,0.06)] ${TINT_CLASSES[tint]}`}
-      >
-        {icon}
-      </span>
-      <span className="text-[11px] font-medium text-[#5C5C5C]">{label}</span>
-    </button>
-  )
-}
 
 function MenuItem({
   label,
@@ -635,63 +851,6 @@ function SmileGlyph() {
       <circle cx="5.6" cy="7" r="0.9" fill="#2A1814" />
       <circle cx="10.4" cy="7" r="0.9" fill="#2A1814" />
       <path d="M5.5 9.5 Q 8 11.5 10.5 9.5" stroke="#2A1814" strokeWidth="1" fill="none" strokeLinecap="round" />
-    </svg>
-  )
-}
-
-function BowlIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M3 11h18v2a8 8 0 0 1-16 0v-2zm2-2c0-1.5 3-3 7-3s7 1.5 7 3"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path d="M12 4v1.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
-  )
-}
-
-function HandIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M8 11V5a1.5 1.5 0 1 1 3 0v6m0 0V4a1.5 1.5 0 1 1 3 0v7m0 0V6.5a1.5 1.5 0 1 1 3 0V14a6 6 0 0 1-6 6h-1a6 6 0 0 1-6-6v-1.5A1.5 1.5 0 0 1 5.5 11 1.5 1.5 0 0 1 7 12.5"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
-
-function GameIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M6 8h12a3 3 0 0 1 3 3v3a3 3 0 0 1-5.5 1.7L14 14h-4l-1.5 1.7A3 3 0 0 1 3 14v-3a3 3 0 0 1 3-3z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-      />
-      <path d="M8 11h2m-1-1v2m5 0h1m1-1h-1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
-  )
-}
-
-function SwapIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M7 7h11l-3-3m3 3-3 3M17 17H6l3 3m-3-3 3-3"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
     </svg>
   )
 }

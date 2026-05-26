@@ -4,12 +4,15 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-do
 import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore'
 import { Button, Card, StackedActionButton, TextField, Textarea } from '../components/ui'
 import { ExchangePreviewCard } from '../features/components/ExchangePreviewCard'
+import { ExchangeQrCode } from '../features/components/ExchangeQrCode'
 import { EggArt } from '../features/components/EggArt'
-import { db } from '../firebase/firebase'
+import { auth, db } from '../firebase/firebase'
 import {
   buildLineShareUrl,
+  buildReceiveUrl,
   buildShareText,
   copyShareText,
+  parseExchangeScanResult,
   shareViaNativeSheet,
 } from '../lib/exchangeShare'
 import { formatShortDate, getCharacterForEgg, getPassionForEgg } from '../lib/viewHelpers'
@@ -89,6 +92,9 @@ export function ExchangePage({
   const [remoteOwnedEggs, setRemoteOwnedEggs] = useState<Egg[]>([])
   const [remotePassions, setRemotePassions] = useState<Passion[]>([])
   const [remoteCharacters, setRemoteCharacters] = useState<Character[]>([])
+  const [qrUrl, setQrUrl] = useState('')
+  const [qrStatus, setQrStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
+  const [qrError, setQrError] = useState('')
 
   const ownedEggs = useMemo(() => {
     const merged = [...eggs, ...remoteOwnedEggs]
@@ -163,6 +169,7 @@ export function ExchangePage({
   const publishedReceiveUrl = publishedExchangeId
     ? buildReceiveUrlForExchange(publishedExchangeId)
     : ''
+  const displayQrUrl = qrUrl || publishedReceiveUrl
 
   useEffect(() => {
     if (ownedEggs.length > 0 && !ownedEggs.some((egg) => egg.id === selectedEggId)) {
@@ -317,6 +324,72 @@ export function ExchangePage({
     return () => window.clearTimeout(timer)
   }, [shareStatus])
 
+  const navigateToScanResult = (raw: string) => {
+    const parsed = parseExchangeScanResult(raw)
+    if (!parsed) {
+      setReceiveStatus('このQRコードは交換用ではありません')
+      return
+    }
+
+    if (parsed.kind === 'exchange-id') {
+      navigate(`/exchange/receive/${parsed.exchangeId}`)
+      return
+    }
+
+    navigate(`/exchange/receive?egg=${encodeURIComponent(parsed.eggId)}`)
+  }
+
+  useEffect(() => {
+    if (!isShareMode || !selectedEgg || !userId) {
+      setQrUrl('')
+      setQrStatus('idle')
+      return
+    }
+
+    let cancelled = false
+
+    const publishQr = async () => {
+      setQrStatus('loading')
+      setQrError('')
+
+      if (!auth.currentUser) {
+        const fallbackUrl = buildReceiveUrl(selectedEgg.id)
+        if (!cancelled) {
+          setQrUrl(fallbackUrl)
+          setQrStatus('ready')
+        }
+        return
+      }
+
+      try {
+        await ensureEggInFirestore(selectedEgg, userId)
+        const { exchangeId } = await callCreateUrlExchange(selectedEgg.id)
+        if (cancelled) {
+          return
+        }
+        const url = buildReceiveUrlForExchange(exchangeId)
+        setPublishedExchangeId(exchangeId)
+        setPublishedEggName(selectedEgg.name)
+        setQrUrl(url)
+        setQrStatus('ready')
+      } catch (error: unknown) {
+        if (cancelled) {
+          return
+        }
+        const message = (error as { message?: string })?.message ?? 'QRの準備に失敗しました'
+        setQrError(message)
+        setQrUrl(buildReceiveUrl(selectedEgg.id))
+        setQrStatus('error')
+      }
+    }
+
+    void publishQr()
+
+    return () => {
+      cancelled = true
+    }
+  }, [isShareMode, selectedEgg?.id, userId])
+
   const stopCamera = () => {
     if (scanTimerRef.current !== null) {
       window.clearInterval(scanTimerRef.current)
@@ -368,6 +441,7 @@ export function ExchangePage({
         if (firstCode) {
           setScanResult(firstCode)
           stopCamera()
+          navigateToScanResult(firstCode)
         }
       }, 500)
     } catch {
@@ -378,8 +452,10 @@ export function ExchangePage({
   const submitManualCode = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (manualCode.trim()) {
-      setScanResult(manualCode.trim())
+      const value = manualCode.trim()
+      setScanResult(value)
       setManualCode('')
+      navigateToScanResult(value)
     }
   }
 
@@ -682,21 +758,34 @@ export function ExchangePage({
               </div>
 
               <div className="own-qr-card" aria-label="自分の交換QR">
-                <div className="qr-mock qr-mock--share">
-                  <span />
-                  <span />
-                  <span />
-                  <strong>QR</strong>
-                </div>
+                {qrStatus === 'loading' ? (
+                  <div className="grid h-[132px] w-[132px] place-items-center rounded-2xl bg-white text-xs font-bold text-[#8A8A8A]">
+                    QR準備中...
+                  </div>
+                ) : displayQrUrl ? (
+                  <ExchangeQrCode value={displayQrUrl} />
+                ) : (
+                  <div className="grid h-[132px] w-[132px] place-items-center rounded-2xl bg-white text-xs font-bold text-[#8A8A8A]">
+                    卵を選んでください
+                  </div>
+                )}
                 <div>
                   <p>会場ではQR</p>
                   <strong>{selectedEgg.name}</strong>
+                  {qrStatus === 'error' ? (
+                    <p className="mt-1 text-[11px] font-semibold leading-relaxed text-[#c0392b]">
+                      本番URLの発行に失敗したため、デモ用リンクのQRを表示しています。
+                    </p>
+                  ) : null}
+                  {qrError ? (
+                    <p className="mt-1 text-[10px] leading-relaxed text-[#8A8A8A]">{qrError}</p>
+                  ) : null}
                 </div>
               </div>
 
               <div className="share-code">
                 <span>受け取りリンク</span>
-                <strong>{`${window.location.origin}/exchange/receive?egg=${selectedEgg.id}`}</strong>
+                <strong>{displayQrUrl || buildReceiveUrl(selectedEgg.id)}</strong>
               </div>
             </Card>
           ) : null}
@@ -748,9 +837,10 @@ export function ExchangePage({
               <div className="scan-result">
                 <span>読み取り結果</span>
                 <strong>{scanResult}</strong>
-                <p>本番ではこの値を交換Functionへ渡して、卵の所有者を更新します。</p>
+                <p>交換ページへ移動します。うまくいかない場合は下の手入力も使えます。</p>
               </div>
             ) : null}
+            {receiveStatus ? <p className="status-message">{receiveStatus}</p> : null}
           </Card>
 
           <form className="panel manual-scan-form" onSubmit={submitManualCode}>
