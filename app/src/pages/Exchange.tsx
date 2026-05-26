@@ -13,7 +13,7 @@ import {
   shareViaNativeSheet,
 } from '../lib/exchangeShare'
 import { formatShortDate, getCharacterForEgg, getPassionForEgg } from '../lib/viewHelpers'
-import { receiveEggLocally } from '../lib/localRepository'
+import { CURRENT_USER_ID, DEMO_RECEIVABLE_EGG_ID, receiveEggLocally } from '../lib/localRepository'
 import { COLLECTIONS } from '../types/firestore'
 import {
   buildReceiveUrlForExchange,
